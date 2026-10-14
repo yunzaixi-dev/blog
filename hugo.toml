@@ -3,6 +3,7 @@ locale = "zh-CN"
 defaultContentLanguage = "zh-cn"
 hasCJKLanguage = true
 title = "在溪"
+timeZone = "Asia/Shanghai"
 enableRobotsTXT = true
 [markup.goldmark.renderer]
 unsafe = true
