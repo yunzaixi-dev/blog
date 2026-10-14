@@ -4,7 +4,9 @@ on:
     branches: [main, dev]
     paths-ignore: ["README.md", "**/*.md.bak", ".gitignore", "LICENSE"]
   workflow_dispatch:
-concurrency: { group: deploy-${{ github.ref_name }}, cancel-in-progress: true }
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
 env:
   HUGO_VERSION: 0.168.0
 jobs:
