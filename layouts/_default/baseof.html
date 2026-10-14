@@ -1,6 +1,7 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ if .IsHome }}{{ site.Title }} · {{ site.Params.tagline }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
 <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ if .IsPage }}{{ .Summary | plainify | truncate 120 }}{{ else }}{{ site.Params.description }}{{ end }}{{ end }}">
+{{ if site.Params.noindex }}<meta name="robots" content="noindex,nofollow">{{ end }}
 <meta name="theme-color" content="#FAF9F5" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#1F1E1D" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="/css/site.css"><link rel="stylesheet" href="/css/chroma.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%23D97757'/></svg>">
