@@ -9,7 +9,9 @@ tags: ["Kratos", "Telegram", "Kubernetes", "身份认证"]
 
 ![纸飞机穿过连续的拱门，寓意登录服务的连续性](01-cover.webp)
 
-我们为折光的门户接入了 Telegram 登录。认证部分使用已有的 Kratos，部署在 Kubernetes 上；门户负责页面和业务权限。
+我们的目标，是为折光实现一套高可用、高安全性的统一认证服务。身份、登录流程与会话由同一套基础设施管理，各个应用在此之上执行自己的准入政策，不再分别维护一套账号系统。
+
+Telegram 登录是这套服务的第一个具体接入场景。我们复用部署在 Kubernetes 上的 Kratos，让门户负责页面和业务权限。高可用意味着副本替换时登录事务仍能继续；高安全性意味着身份声明、会话来源与业务权限都经过后端校验。它们是这次建设的目标，不能仅凭三个 Pod 或一次登录成功就宣布全部达成。
 
 这次接入分成了两段工作。先把 Kratos API 调整为跨节点的三个副本，检查登录流程能否在副本之间继续。再接入 Telegram OIDC，完成身份映射，并在门户后端限制登录来源。
 
@@ -23,7 +25,9 @@ tags: ["Kratos", "Telegram", "Kubernetes", "身份认证"]
 
 Telegram 提供外部身份。Kratos 将它关联到本站 identity，管理登录流程与会话。门户读取经过验证的会话，再检查自己的准入条件。指定群组成员资格、服务器政策等条件仍属于业务逻辑。
 
-![外部身份穿过门户，成为本站会话的概念插画](02-identity.webp)
+![统一认证服务的逻辑架构：浏览器与门户使用 Kratos，三个 API 副本共享 PostgreSQL，单活 Courier 负责邮件投递](07-architecture.webp)
+
+图中表示组件职责与逻辑依赖，省略了入口代理及数据库复制拓扑；不代表所有门户功能都已在生产启用。Telegram 的浏览器跳转与服务端换码过程见下方时序图。
 
 这里的 Kratos 是 OIDC 客户端。它向 Telegram 发起认证请求，并建立本站会话；它不是给其他应用签发 OAuth access token 的授权服务器。因此，这次接入不需要先增加 Hydra。
 
@@ -52,6 +56,10 @@ Telegram 提供外部身份。Kratos 将它关联到本站 identity，管理登�
 Telegram 当前官方文档提供 OIDC discovery，支持授权码与 PKCE S256，默认使用 RS256 签名。它把用户资料放在 ID token 中，没有单独的 UserInfo 端点。[官方文档](https://core.telegram.org/bots/telegram-login)
 
 对应到 Kratos，我们使用 generic provider，从 ID token 读取声明，申请 `openid profile`，并强制 PKCE。Client ID 和 Client Secret 来自 BotFather 的登录设置，Secret 只在服务端使用。
+
+![Telegram OIDC 登录时序：浏览器跳转授权，Kratos 在服务端用授权码与 verifier 换取 ID token，校验后建立会话](08-login-flow.webp)
+
+这张图省略了首次注册的补资料步骤。PKCE 跳转携带的是 challenge，verifier 留在服务端；只有 token 校验和必要的注册步骤完成后，才建立会话。
 
 这里有两个配置细节值得单独检查。
 
@@ -136,4 +144,4 @@ Kratos API 三副本与 Telegram 服务端配置已部署，重建过期流程�
 - [Ory：接入通用 OpenID Connect 提供方](https://www.ory.com/docs/kratos/social-signin/generic)
 - [Ory Kratos](https://www.ory.com/kratos)
 
-实施数据来自本项目的私有开发与验收记录。原始导出包含凭据，不随本文公开。配图由 AI 生成，用于表达身份、冗余与验证等概念，不是协议时序图或生产控制台截图。
+实施数据来自本项目的私有开发与验收记录。原始导出包含凭据，不随本文公开。配图由 AI 生成，包含概念插画、逻辑架构图与简化登录时序图；架构和时序已按本文流程核对，均非生产控制台截图。
