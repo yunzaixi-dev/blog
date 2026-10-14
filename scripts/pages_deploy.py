@@ -11,7 +11,7 @@ def req(url, auth, data=None, ctype="application/json", method=None):
     with urllib.request.urlopen(r, timeout=60) as resp:
         j = json.load(resp)
     if not j.get("success"): sys.exit(f"API error {url}: {j.get('errors')}")
-    return j["result"]
+    return j.get("result")
 files = {}
 for root, _, names in os.walk(d):
     for n in names:
