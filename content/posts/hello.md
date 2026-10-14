@@ -4,7 +4,7 @@ date: 2026-10-15T03:50:00+08:00
 description: "第一篇文章：这个博客是怎么搭起来的，以及推送即上线的部署流水线。"
 tags: ["随笔", "Hugo", "Cloudflare"]
 ---
-这是用 Hugo 搭建、通过 Cloudflare Pages 部署的第一篇文章。推送到 `main` 即自动上线。
+这是用 Hugo 搭建、通过 Cloudflare Pages 部署的第一篇文章。推送到 `main` 即自动上线。<!--a-->
 
 ## 为什么是 Hugo
 
