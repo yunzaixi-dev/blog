@@ -2,13 +2,13 @@ baseURL = "https://zaixi.dev/"
 locale = "zh-CN"
 defaultContentLanguage = "zh-cn"
 hasCJKLanguage = true
-title = "在溪"
+title = "zaixi.dev"
 timeZone = "Asia/Shanghai"
 enableRobotsTXT = true
 summaryLength = 80
 [params]
-tagline = "在溪边，慢慢写点东西。"
-description = "关于工程、系统与日常折腾的笔记。"
+tagline = "纯粹的技术博客"
+description = "纯粹的技术博客"
 [taxonomies]
 tag = "tags"
 [menus]
