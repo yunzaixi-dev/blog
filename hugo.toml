@@ -1,0 +1,13 @@
+baseURL = "https://zaixi.dev/"
+locale = "zh-CN"
+defaultContentLanguage = "zh-cn"
+hasCJKLanguage = true
+title = "在溪"
+enableRobotsTXT = true
+[markup.goldmark.renderer]
+unsafe = true
+[markup.highlight]
+noClasses = true
+style = "github"
+[outputs]
+home = ["HTML","RSS"]

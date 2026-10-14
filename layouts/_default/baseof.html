@@ -1,0 +1,10 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
+{{ with .OutputFormats.Get "rss" }}<link rel="alternate" type="application/rss+xml" href="{{ .RelPermalink }}">{{ end }}
+<style>
+:root{color-scheme:light dark}body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:17px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif}
+a{color:#2563eb;text-decoration:none}a:hover{text-decoration:underline}header{display:flex;justify-content:space-between;margin-bottom:2rem}header a{color:inherit;font-weight:700}
+time{color:#888;font-size:.9em}ul.posts{list-style:none;padding:0}ul.posts li{display:flex;justify-content:space-between;gap:1rem;padding:.3rem 0}
+pre{padding:1rem;overflow:auto;border-radius:6px}img{max-width:100%}footer{margin-top:4rem;color:#888;font-size:.85em}
+</style></head><body><header><a href="/">{{ site.Title }}</a><a href="/index.xml">RSS</a></header>
+<main>{{ block "main" . }}{{ end }}</main><footer>© {{ now.Year }} {{ site.Title }}</footer></body></html>
