@@ -1,1 +1,3 @@
-{{ define "main" }}{{ with .Content }}{{ . }}{{ end }}<ul class="posts">{{ range (where site.RegularPages "Section" "posts") }}<li><a href="{{ .RelPermalink }}">{{ .Title }}</a><time>{{ .Date.Format "2006-01-02" }}</time></li>{{ end }}</ul>{{ end }}
+{{ define "main" }}<section class="hero"><div class="wrap"><p class="eyebrow">Notes · 笔记</p><h1>{{ site.Params.tagline }}</h1><p>{{ site.Params.description }}</p><a class="btn" href="/posts/">阅读文章 →</a></div></section>
+<section class="section"><div class="wrap"><div class="section-head"><h2>最新文章</h2><a href="/posts/">全部 →</a></div>
+<ul class="posts">{{ range first 8 (where site.RegularPages "Section" "posts") }}{{ partial "card.html" . }}{{ end }}</ul></div></section>{{ end }}

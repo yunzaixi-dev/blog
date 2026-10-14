@@ -1,1 +1,4 @@
-{{ define "main" }}<article><h1>{{ .Title }}</h1><time>{{ .Date.Format "2006-01-02" }}</time>{{ .Content }}</article>{{ end }}
+{{ define "main" }}<div class="wrap"><article class="article"><header class="page-head">
+{{ if .IsPage }}{{ if ne .Section "about" }}<div class="meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006 年 1 月 2 日" }}</time><span>· {{ .ReadingTime }} 分钟阅读</span></div>{{ end }}{{ end }}
+<h1>{{ .Title }}</h1>{{ with .Params.tags }}<div class="tags">{{ range . }}<a class="tag" href="{{ (printf "/tags/%s/" (. | urlize)) }}">#{{ . }}</a>{{ end }}</div>{{ end }}</header>
+<div class="prose">{{ .Content }}</div></article></div>{{ end }}

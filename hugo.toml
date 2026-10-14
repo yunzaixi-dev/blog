@@ -5,10 +5,28 @@ hasCJKLanguage = true
 title = "在溪"
 timeZone = "Asia/Shanghai"
 enableRobotsTXT = true
+summaryLength = 80
+[params]
+tagline = "在溪边，慢慢写点东西。"
+description = "关于工程、系统与日常折腾的笔记。"
+[taxonomies]
+tag = "tags"
+[menus]
+[[menus.main]]
+name = "文章"
+pageRef = "/posts"
+weight = 1
+[[menus.main]]
+name = "标签"
+pageRef = "/tags"
+weight = 2
+[[menus.main]]
+name = "关于"
+pageRef = "/about"
+weight = 3
 [markup.goldmark.renderer]
 unsafe = true
 [markup.highlight]
-noClasses = true
-style = "github"
+noClasses = false
 [outputs]
 home = ["HTML","RSS"]
