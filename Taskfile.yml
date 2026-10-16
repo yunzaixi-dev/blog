@@ -1,0 +1,138 @@
+# zaixi.dev 博客常用命令（go-task v3）
+# 安装 task: https://taskfile.dev/installation/  或
+#   curl -fsSL https://taskfile.dev/install.sh | sh
+# 依赖: hugo（构建）、ffmpeg（视频转 WebP）、python3（Pages 直传）
+# 列出全部任务: task --list
+version: "3"
+
+vars:
+  HUGO: hugo
+  PROJECT: zaixi-blog
+  FORUM_DIR: static/forum
+  # webp 默认：宽 720、12fps、质量 60、循环；单文件请保持 < 25MiB（Pages 限制）
+  WEBP_SCALE: "720:-2"
+  WEBP_FPS: "12"
+  WEBP_Q: "60"
+
+tasks:
+  default:
+    desc: 列出可用任务
+    cmds:
+      - task --list
+
+  build:
+    desc: 本地构建（输出到 public/）
+    cmds:
+      - "{{.HUGO}} --minify"
+
+  serve:
+    desc: 本地预览（含草稿，http://localhost:1313）
+    aliases: [preview]
+    cmds:
+      - "{{.HUGO}} server -D --bind 0.0.0.0"
+
+  clean:
+    desc: 清理构建产物
+    cmds:
+      - rm -rf public resources/_gen
+      - rm -f .hugo_build.lock
+
+  new-post:
+    desc: '新建文章目录 content/posts/<SLUG>/index.md。例: task new-post SLUG=my-post'
+    requires:
+      vars: [SLUG]
+    cmds:
+      - |
+        set -euo pipefail
+        dir="content/posts/{{.SLUG}}"
+        if [ -e "$dir" ]; then echo "已存在: $dir" >&2; exit 1; fi
+        mkdir -p "$dir"
+        ts=$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\([0-9][0-9]\)$/:\1/')
+        cat > "$dir/index.md" <<MD
+        ---
+        title: "{{.SLUG}}"
+        date: ${ts}
+        description: ""
+        tags: []
+        ---
+
+        MD
+        echo "已创建 $dir/index.md"
+
+  # --- 论坛动态 WebP ---
+
+  webp:
+    desc: '视频→动态 WebP 到 static/forum/。例: task webp IN=clip.mp4  或 OUT=demo.webp'
+    aliases: [forum:webp]
+    requires:
+      vars: [IN]
+    cmds:
+      - |
+        set -euo pipefail
+        command -v ffmpeg >/dev/null || { echo "需要 ffmpeg。Debian/Ubuntu: sudo apt install ffmpeg" >&2; exit 1; }
+        in="{{.IN}}"
+        [ -f "$in" ] || { echo "找不到输入: $in" >&2; exit 1; }
+        out="{{.OUT}}"
+        if [ -z "$out" ]; then
+          base=$(basename "$in")
+          base=${base%.*}
+          # 文件名仅保留英文数字连字符
+          base=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//')
+          [ -n "$base" ] || base="clip"
+          out="{{.FORUM_DIR}}/${base}.webp"
+        elif [[ "$out" != /* && "$out" != {{.FORUM_DIR}}/* ]]; then
+          out="{{.FORUM_DIR}}/$(basename "$out")"
+        fi
+        mkdir -p "{{.FORUM_DIR}}"
+        scale="{{.SCALE | default .WEBP_SCALE}}"
+        fps="{{.FPS | default .WEBP_FPS}}"
+        q="{{.Q | default .WEBP_Q}}"
+        echo "转换: $in → $out (scale=${scale} fps=${fps} q=${q})"
+        ffmpeg -y -hide_banner -loglevel error -i "$in" \
+          -vf "scale=${scale}:flags=lanczos,fps=${fps}" \
+          -c:v libwebp -lossless 0 -compression_level 6 -q:v "$q" \
+          -loop 0 -an -vsync 0 "$out"
+        sz=$(wc -c < "$out")
+        echo "完成: $out ($sz bytes)"
+        if [ "$sz" -gt 26214400 ]; then
+          echo "警告: 超过 Pages 单文件约 25MiB，请降低分辨率/帧率/质量，例如:" >&2
+          echo "  task webp IN=$in SCALE=480:-2 FPS=8 Q=40" >&2
+        fi
+        echo "预览 URL: https://dev.zaixi.dev/forum/$(basename "$out")"
+        echo "正式 URL: https://zaixi.dev/forum/$(basename "$out")"
+
+  forum:upload:
+    desc: '把已有 .webp 拷进 static/forum/。例: task forum:upload FILE=./a.webp NAME=demo'
+    requires:
+      vars: [FILE]
+    cmds:
+      - |
+        set -euo pipefail
+        src="{{.FILE}}"
+        [ -f "$src" ] || { echo "找不到: $src" >&2; exit 1; }
+        name="{{.NAME}}"
+        if [ -z "$name" ]; then
+          name=$(basename "$src")
+        else
+          case "$name" in *.webp|*.WEBP) ;; *) name="${name}.webp" ;; esac
+        fi
+        mkdir -p "{{.FORUM_DIR}}"
+        dest="{{.FORUM_DIR}}/$(basename "$name")"
+        cp -f "$src" "$dest"
+        echo "已拷贝 → $dest"
+        echo "论坛 Markdown: ![说明](https://zaixi.dev/forum/$(basename "$dest"))"
+
+  # --- 部署（需 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID）---
+  # 日常推送会走 GitHub Actions；本地直传仅在调试时用。
+
+  deploy-dev:
+    desc: 本地构建并直传到 dev.zaixi.dev（需 Cloudflare 环境变量）
+    cmds:
+      - HUGO_PARAMS_NOINDEX=true {{.HUGO}} --minify --baseURL "https://dev.zaixi.dev/"
+      - python3 scripts/pages_deploy.py public {{.PROJECT}} dev
+
+  deploy-prod:
+    desc: 本地构建并直传到 zaixi.dev 正式站（慎用；一般合并 main 即可）
+    cmds:
+      - "{{.HUGO}} --minify"
+      - python3 scripts/pages_deploy.py public {{.PROJECT}} main
