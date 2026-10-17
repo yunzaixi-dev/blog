@@ -21,6 +21,8 @@ tags: ["Codex", "Claude", "AI 工具", "实测"]
 | 总耗时 | 25.85 s |
 | 输出速度 | 45.8 tok/s |
 
+![一次 Codex 请求在网关面板上的 token、费用和延迟](/codex-cheap-claude-alt/panel.jpg)
+
 ## 怎么看这组数字
 
 - **速度**：首字将近 5 秒不算快，但出字之后 45.8 tok/s 很稳，一千多 token 的回复 26 秒左右写完，不卡人。
