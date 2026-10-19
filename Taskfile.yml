@@ -136,3 +136,8 @@ tasks:
     cmds:
       - "{{.HUGO}} --minify"
       - python3 scripts/pages_deploy.py public {{.PROJECT}} main
+
+  deploy:fast:
+    desc: 从 box 直传 Cloudflare Pages（BRANCH=main|dev|both，默认 both），不等 Actions
+    cmds:
+      - scripts/fast-deploy.sh {{.BRANCH | default "both"}}
