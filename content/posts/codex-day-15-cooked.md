@@ -15,8 +15,7 @@ tags: ["Codex", "OpenAI", "AI 工具", "随笔"]
 
 > Day 15/ We're cooked
 
-<blockquote class="twitter-tweet" data-dnt="true"><p lang="en" dir="ltr">Day 15/ We're cooked</p>&mdash; Tibo (@thsottiaux) <a href="https://x.com/thsottiaux/status/2112268918681485431">2026-10-20 03:45 (UTC+8)</a></blockquote>
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+![Tibo: Day 15/ We're cooked](/codex-day-15-cooked/tibo.jpg)
 
 北京时间 10 月 20 日 3:45 发的，我截图的时候已经 4.9 万次浏览、400 多条回复。
 
