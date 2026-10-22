@@ -1,14 +1,13 @@
 # zaixi.dev 博客常用命令（go-task v3）
 # 安装 task: https://taskfile.dev/installation/  或
 #   curl -fsSL https://taskfile.dev/install.sh | sh
-# 依赖: hugo（构建）、ffmpeg（视频转 WebP）、python3（Pages 直传）
+# 依赖: Node.js 22 + pnpm（构建）、ffmpeg（视频转 WebP）、python3（Pages 直传）、wl-copy（导出到剪贴板）
 # 列出全部任务: task --list
 version: "3"
 
 vars:
-  HUGO: hugo
   PROJECT: zaixi-blog
-  FORUM_DIR: static/forum
+  FORUM_DIR: public/forum
   # webp 默认：宽 720、12fps、质量 60、循环；单文件请保持 < 25MiB（Pages 限制）
   WEBP_SCALE: "720:-2"
   WEBP_FPS: "12"
@@ -20,49 +19,93 @@ tasks:
     cmds:
       - task --list
 
-  build:
-    desc: 本地构建（输出到 public/）
+  install:
+    desc: 安装依赖
     cmds:
-      - "{{.HUGO}} --minify"
+      - pnpm install
 
   serve:
-    desc: 本地预览（含草稿，http://localhost:1313）
-    aliases: [preview]
+    desc: 本地开发预览（热更新，http://localhost:3001）
+    aliases: [dev]
     cmds:
-      - "{{.HUGO}} server -D --bind 0.0.0.0"
+      - pnpm dev
+
+  build:
+    desc: 构建静态站点（输出到 out/）
+    cmds:
+      - pnpm build
+
+  preview:
+    desc: 构建并用 Caddy 预览静态产物（与线上行为一致）
+    cmds:
+      - pnpm preview
+
+  check:
+    desc: 格式、lint、类型、单元测试等全部检查（CI 的 check 任务）
+    cmds:
+      - pnpm check
 
   clean:
     desc: 清理构建产物
     cmds:
-      - rm -rf public resources/_gen
-      - rm -f .hugo_build.lock
+      - pnpm clean
 
   new-post:
-    desc: '新建文章目录 content/posts/<SLUG>/index.md。例: task new-post SLUG=my-post'
+    desc: '新建文章 content/blog/zh/<CATEGORY>/<SLUG>.md。例: task new-post SLUG=my-post CATEGORY=工程 TITLE="标题"'
     requires:
-      vars: [SLUG]
+      vars: [SLUG, CATEGORY]
     cmds:
       - |
         set -euo pipefail
-        dir="content/posts/{{.SLUG}}"
-        if [ -e "$dir" ]; then echo "已存在: $dir" >&2; exit 1; fi
-        mkdir -p "$dir"
+        file="content/blog/zh/{{.CATEGORY}}/{{.SLUG}}.md"
+        if [ -e "$file" ]; then echo "已存在: $file" >&2; exit 1; fi
+        mkdir -p "$(dirname "$file")"
         ts=$(date +%Y-%m-%dT%H:%M:%S%z | sed 's/\([0-9][0-9]\)$/:\1/')
-        cat > "$dir/index.md" <<MD
+        cat > "$file" <<MD
         ---
-        title: "{{.SLUG}}"
+        title: "{{.TITLE | default .SLUG}}"
         date: ${ts}
-        description: ""
+        summary: ""
+        categories: ["{{.CATEGORY}}"]
         tags: []
+        language: zh
+        authors: ['default']
         ---
 
         MD
-        echo "已创建 $dir/index.md"
+        echo "已创建 $file"
+        echo "配图放到 public/static/images/{{.SLUG}}/，然后运行 task images"
+
+  images:
+    desc: 为 public/static/images 下新加的 JPG/PNG 生成多尺寸 WebP 和尺寸清单
+    cmds:
+      - pnpm images:optimize
+
+  # --- 导出到其他平台 ---
+
+  export:list:
+    desc: 列出可导出的文章 slug
+    cmds:
+      - pnpm -s export list
+
+  export:forum:
+    desc: '复制论坛 Markdown（图片为完整 URL）到剪贴板。例: task export:forum SLUG=reliable-login'
+    requires:
+      vars: [SLUG]
+    cmds:
+      - pnpm -s export forum {{.SLUG}}
+
+  export:x:
+    desc: '复制 X 文章富文本到剪贴板，图片按顺序存到 ~/Downloads/x-export/<SLUG>/。例: task export:x SLUG=reliable-login'
+    requires:
+      vars: [SLUG]
+    cmds:
+      - pnpm -s export x {{.SLUG}}
 
   # --- 论坛动态 WebP ---
 
   webp:
-    desc: '视频→动态 WebP 到 static/forum/。例: task webp IN=clip.mp4  或 OUT=demo.webp'
+    desc: '视频→动态 WebP 到 public/forum/。例: task webp IN=clip.mp4  或 OUT=demo.webp'
     aliases: [forum:webp]
     requires:
       vars: [IN]
@@ -102,7 +145,7 @@ tasks:
         echo "正式 URL: https://zaixi.dev/forum/$(basename "$out")"
 
   forum:upload:
-    desc: '把已有 .webp 拷进 static/forum/。例: task forum:upload FILE=./a.webp NAME=demo'
+    desc: '把已有 .webp 拷进 public/forum/。例: task forum:upload FILE=./a.webp NAME=demo'
     requires:
       vars: [FILE]
     cmds:
@@ -123,19 +166,20 @@ tasks:
         echo "论坛 Markdown: ![说明](https://zaixi.dev/forum/$(basename "$dest"))"
 
   # --- 部署（需 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID）---
-  # 日常推送会走 GitHub Actions；本地直传仅在调试时用。
+  # 日常推送走 GitHub Actions（Sengi runner）；本地直传用于不想等 CI 的时候。
 
   deploy-dev:
     desc: 本地构建并直传到 dev.zaixi.dev（需 Cloudflare 环境变量）
     cmds:
-      - HUGO_PARAMS_NOINDEX=true {{.HUGO}} --minify --baseURL "https://dev.zaixi.dev/"
-      - python3 scripts/pages_deploy.py public {{.PROJECT}} dev
+      - NEXT_PUBLIC_SITE_URL=https://dev.zaixi.dev NEXT_PUBLIC_NOINDEX=true pnpm build
+      - "printf '\\n/*\\n  X-Robots-Tag: noindex\\n' >> out/_headers"
+      - python3 scripts/pages_deploy.py out {{.PROJECT}} dev
 
   deploy-prod:
     desc: 本地构建并直传到 zaixi.dev 正式站（慎用；一般合并 main 即可）
     cmds:
-      - "{{.HUGO}} --minify"
-      - python3 scripts/pages_deploy.py public {{.PROJECT}} main
+      - pnpm build
+      - python3 scripts/pages_deploy.py out {{.PROJECT}} main
 
   deploy:fast:
     desc: 从 box 直传 Cloudflare Pages（BRANCH=main|dev|both，默认 both），不等 Actions

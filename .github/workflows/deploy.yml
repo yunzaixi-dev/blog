@@ -2,27 +2,56 @@ name: deploy
 on:
   push:
     branches: [main, dev]
-    paths-ignore: ["README.md", "**/*.md.bak", ".gitignore", "LICENSE"]
+    paths-ignore: ["README.md", "LICENSE", "docs/**"]
   workflow_dispatch:
 concurrency:
   group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
-env:
-  HUGO_VERSION: 0.168.0
+
 jobs:
+  # The release path does only what reaching the site needs; checks run beside it.
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: sengi-standard-2-ubuntu-2404
     permissions: { contents: read }
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 1 }
+        with:
+          # Post pages show their git history (updated time, commits).
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: pnpm install --frozen-lockfile
       - name: Build
         run: |
-          curl -fsSL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz | tar xz -C /tmp hugo
-          if [ "$GITHUB_REF_NAME" = main ]; then /tmp/hugo --minify
-          else HUGO_PARAMS_NOINDEX=true /tmp/hugo --minify --baseURL "https://$GITHUB_REF_NAME.zaixi.dev/"; fi
-      - name: Deploy (Pages Direct Upload)
-        run: python3 scripts/pages_deploy.py public zaixi-blog "$GITHUB_REF_NAME"
+          if [ "$GITHUB_REF_NAME" = main ]; then pnpm build
+          else NEXT_PUBLIC_SITE_URL="https://$GITHUB_REF_NAME.zaixi.dev" NEXT_PUBLIC_NOINDEX=true pnpm build
+            printf '\n/*\n  X-Robots-Tag: noindex\n' >> out/_headers
+          fi
+      - name: Deploy (Pages Direct Upload, changed files only)
+        run: python3 scripts/pages_deploy.py out zaixi-blog "$GITHUB_REF_NAME"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  check:
+    runs-on: sengi-standard-2-ubuntu-2404
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check

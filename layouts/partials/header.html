@@ -1,3 +1,0 @@
-<header class="site-header"><div class="wrap"><a class="logo" href="/">{{ site.Title }}</a><nav><ul>
-{{ $cur := . }}{{ range site.Menus.main }}<li><a href="{{ .URL }}"{{ if or ($cur.IsMenuCurrent "main" .) ($cur.HasMenuCurrent "main" .) }} aria-current="page"{{ end }}>{{ .Name }}</a></li>{{ end }}
-<li class="rss"><a href="/index.xml">RSS</a></li></ul></nav></div></header>

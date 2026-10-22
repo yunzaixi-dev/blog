@@ -1,0 +1,50 @@
+# Old Hugo URLs (zaixi.dev before the Next.js move)
+/posts /zh/ 301
+/posts/ /zh/ 301
+/about /zh/ 301
+/about/ /zh/ 301
+/index.xml /feed.xml 301
+/posts/codex-cheap-claude-alt /zh/AI/codex-cheap-claude-alt/ 301
+/posts/codex-cheap-claude-alt/ /zh/AI/codex-cheap-claude-alt/ 301
+/codex-cheap-claude-alt/* /static/images/codex-cheap-claude-alt/:splat 301
+/posts/codex-day-15-cooked /zh/AI/codex-day-15-cooked/ 301
+/posts/codex-day-15-cooked/ /zh/AI/codex-day-15-cooked/ 301
+/codex-day-15-cooked/* /static/images/codex-day-15-cooked/:splat 301
+/posts/forum-animated-webp /zh/%E5%BB%BA%E7%AB%99/forum-animated-webp/ 301
+/posts/forum-animated-webp/ /zh/%E5%BB%BA%E7%AB%99/forum-animated-webp/ 301
+/posts/hello /zh/%E5%BB%BA%E7%AB%99/hello/ 301
+/posts/hello/ /zh/%E5%BB%BA%E7%AB%99/hello/ 301
+/posts/nodeseek-content-types /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-content-types/ 301
+/posts/nodeseek-content-types/ /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-content-types/ 301
+/nodeseek-content-types/* /static/images/nodeseek-content-types/:splat 301
+/posts/nodeseek-online /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-online/ 301
+/posts/nodeseek-online/ /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-online/ 301
+/nodeseek-online/* /static/images/nodeseek-online/:splat 301
+/posts/nodeseek-post-types /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-post-types/ 301
+/posts/nodeseek-post-types/ /zh/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/nodeseek-post-types/ 301
+/nodeseek-post-types/* /static/images/nodeseek-post-types/:splat 301
+/posts/reliable-login /zh/%E5%B7%A5%E7%A8%8B/reliable-login/ 301
+/posts/reliable-login/ /zh/%E5%B7%A5%E7%A8%8B/reliable-login/ 301
+
+/ /zh/ 301
+
+/categories /zh/categories/ 301
+/categories/ /zh/categories/ 301
+/categories/* /zh/categories/:splat 301
+
+/tags /zh/tags/ 301
+/tags/ /zh/tags/ 301
+/tags/* /zh/tags/:splat 301
+
+/blog /zh/ 301
+/blog/ /zh/ 301
+/blog/* /zh/:splat 301
+
+/zh/blog /zh/ 301
+/zh/blog/ /zh/ 301
+/zh/blog/* /zh/:splat 301
+
+/en/blog /en/ 301
+/en/blog/ /en/ 301
+/en/blog/* /en/:splat 301
+

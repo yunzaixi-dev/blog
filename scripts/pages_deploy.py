@@ -12,10 +12,15 @@ def req(url, auth, data=None, ctype="application/json", method=None):
         j = json.load(resp)
     if not j.get("success"): sys.exit(f"API error {url}: {j.get('errors')}")
     return j.get("result")
+# Pages reads these from their own form fields (as wrangler sends them); in the
+# asset manifest they are just files and the rules never apply.
+SPECIAL = ("_headers", "_redirects", "_routes.json")
+special = {n: open(os.path.join(d, n), "rb").read() for n in SPECIAL if os.path.isfile(os.path.join(d, n))}
 files = {}
 for root, _, names in os.walk(d):
     for n in names:
         p = os.path.join(root, n); rel = "/" + os.path.relpath(p, d).replace(os.sep, "/")
+        if rel[1:] in special: continue
         b64 = base64.b64encode(open(p, "rb").read()).decode()
         ext = os.path.splitext(n)[1].lstrip(".")
         h = hashlib.sha256((b64 + ext).encode()).hexdigest()[:32]
@@ -37,6 +42,10 @@ bd = uuid.uuid4().hex; parts = []
 for k, v in (("manifest", json.dumps({k: v[0] for k, v in files.items()})), ("branch", branch),
              ("commit_hash", os.environ.get("GITHUB_SHA", "")), ("commit_dirty", "true")):
     if v: parts.append(f'--{bd}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n')
-body = ("".join(parts) + f"--{bd}--\r\n").encode()
+body = "".join(parts).encode()
+for n, content in special.items():
+    body += (f'--{bd}\r\nContent-Disposition: form-data; name="{n}"; filename="{n}"\r\n'
+             f'Content-Type: application/octet-stream\r\n\r\n').encode() + content + b"\r\n"
+body += f"--{bd}--\r\n".encode()
 dep = req(base + "/deployments", tok, body, f"multipart/form-data; boundary={bd}")
-print(f"files={len(files)} uploaded={len(todo)} deployment={dep['id']} url={dep['url']}")
+print(f"files={len(files)} uploaded={len(todo)} rules={','.join(special) or 'none'} deployment={dep['id']} url={dep['url']}")

@@ -1,0 +1,1174 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@custom-variant dark (&:where(.dark, .dark *));
+@import './prism.css';
+
+/* Core theme configuration */
+@theme {
+  /* Font families */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+
+  /* Colors */
+  /* Copied from https://tailwindcss.com/docs/theme#default-theme-variable-reference */
+  --color-primary-50: oklch(0.971 0.014 343.198);
+  --color-primary-100: oklch(0.948 0.028 342.258);
+  --color-primary-200: oklch(0.899 0.061 343.231);
+  --color-primary-300: oklch(0.823 0.12 346.018);
+  --color-primary-400: oklch(0.718 0.202 349.761);
+  --color-primary-500: oklch(0.656 0.241 354.308);
+  --color-primary-600: oklch(0.592 0.249 0.584);
+  --color-primary-700: oklch(0.525 0.223 3.958);
+  --color-primary-800: oklch(0.459 0.187 3.815);
+  --color-primary-900: oklch(0.408 0.153 2.432);
+  --color-primary-950: oklch(0.284 0.109 3.907);
+
+  --color-gray-50: oklch(0.985 0.002 247.839);
+  --color-gray-100: oklch(0.967 0.003 264.542);
+  --color-gray-200: oklch(0.928 0.006 264.531);
+  --color-gray-300: oklch(0.872 0.01 258.338);
+  --color-gray-400: oklch(0.707 0.022 261.325);
+  --color-gray-500: oklch(0.551 0.027 264.364);
+  --color-gray-600: oklch(0.446 0.03 256.802);
+  --color-gray-700: oklch(0.373 0.034 259.733);
+  --color-gray-800: oklch(0.278 0.033 256.848);
+  --color-gray-900: oklch(0.21 0.034 264.665);
+  --color-gray-950: oklch(0.13 0.028 261.692);
+
+  --color-surface-page: #f2f5f8;
+  --color-surface-page-dark: #181c27;
+  --color-surface-card-dark: #252d38;
+  --color-surface-code-dark: #10161f;
+  --color-surface-raised-dark: #1f2937;
+  --color-surface-cover-dark: #111827;
+  --color-border-subtle-dark: #405064;
+  --color-border-muted-dark: #415064;
+  --color-border-footer-dark: #2f3947;
+
+  /* Line heights */
+  --line-height-11: 2.75rem;
+  --line-height-12: 3rem;
+  --line-height-13: 3.25rem;
+  --line-height-14: 3.5rem;
+
+  /* Z-index values */
+  --z-60: 60;
+  --z-70: 70;
+  --z-80: 80;
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  html {
+    scrollbar-color: #94a3b8 transparent;
+  }
+
+  body {
+    min-width: 320px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-sky-300) 45%, transparent);
+    color: var(--color-slate-950);
+  }
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-slate-200, currentColor);
+  }
+
+  a,
+  button,
+  input,
+  summary {
+    outline-color: var(--color-sky-700);
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid;
+    border-radius: var(--radius-sm);
+    outline-color: var(--color-sky-700);
+  }
+}
+
+@layer utilities {
+  @keyframes animata-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .prose {
+    & a {
+      color: var(--color-sky-700);
+      &:hover {
+        color: var(--color-sky-800);
+      }
+      & code {
+        color: var(--color-sky-700);
+      }
+    }
+    & :where(h1, h2) {
+      font-weight: 700;
+      letter-spacing: var(--tracking-tight);
+    }
+    & h3 {
+      font-weight: 600;
+    }
+  }
+
+  .article-prose.prose {
+    --article-measure: var(--article-rail-width, min(100%, 49rem));
+    --article-inline-code-fg: rgb(51 65 85);
+    --article-inline-code-bg: rgb(248 250 252 / 0.96);
+    --article-inline-code-border: rgb(148 163 184 / 0.54);
+    --article-inline-code-shadow: rgb(148 163 184 / 0.2);
+    --article-inline-code-link-fg: rgb(3 105 161);
+    --article-mark-bg: rgb(254 243 199 / 0.82);
+    --article-mark-fg: rgb(120 53 15);
+    color: var(--color-slate-700);
+    font-size: clamp(1.09375rem, 1.04rem + 0.18vw, 1.125rem);
+    line-height: 1.65;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+
+    & ::selection {
+      background: color-mix(in oklab, var(--color-sky-300) 48%, transparent);
+      color: var(--color-slate-950);
+    }
+
+    & > :first-child {
+      margin-top: 0;
+    }
+
+    &
+      > :where(
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        ul,
+        ol,
+        dl,
+        blockquote,
+        details,
+        hr,
+        .footnotes,
+        .article-data-block
+      ) {
+      box-sizing: border-box;
+      width: var(--article-measure);
+      max-width: var(--article-measure);
+      margin-inline: auto;
+    }
+
+    &
+      > :where(
+        pre,
+        .article-figure,
+        figure[data-rehype-pretty-code-figure],
+        mjx-container[jax='SVG'][display='true']
+      ) {
+      --article-breakout-width: min(100%, calc(100% - (var(--article-gutter, 1.25rem) * 2)));
+      box-sizing: border-box;
+      width: var(--article-breakout-width);
+      max-width: var(--article-breakout-width);
+      margin-inline: auto;
+    }
+
+    & > :where(.article-table-scroll) {
+      --article-breakout-width: min(100%, calc(100% - (var(--article-gutter, 1.25rem) * 2)));
+      box-sizing: border-box;
+      width: fit-content;
+      max-width: var(--article-breakout-width);
+      margin-inline: auto;
+    }
+
+    & :where(.article-figure figcaption) {
+      box-sizing: border-box;
+      width: min(100%, var(--article-measure));
+      max-width: min(100%, var(--article-measure));
+      margin-inline: auto;
+    }
+
+    & :where(h1, h2, h3, h4, h5, h6) {
+      max-width: var(--article-measure);
+      margin-inline: auto;
+      scroll-margin-top: 6rem;
+      text-wrap: balance;
+      letter-spacing: 0;
+      overflow-wrap: break-word;
+    }
+
+    & :where(h2) {
+      margin-top: 2.45rem;
+      margin-bottom: 0.75rem;
+      font-size: clamp(1.45rem, 1.32rem + 0.34vw, 1.68rem);
+      line-height: 1.22;
+      font-weight: 700;
+    }
+
+    & :where(h3) {
+      margin-top: 1.95rem;
+      margin-bottom: 0.55rem;
+      font-size: clamp(1.18rem, 1.09rem + 0.18vw, 1.32rem);
+      line-height: 1.3;
+      font-weight: 650;
+    }
+
+    & :where(h4) {
+      margin-top: 1.65rem;
+      margin-bottom: 0.45rem;
+      font-size: 1.08rem;
+      line-height: 1.38;
+      font-weight: 650;
+    }
+
+    & :where(h5) {
+      margin-top: 1.45rem;
+      margin-bottom: 0.45rem;
+      font-size: 1rem;
+      line-height: 1.42;
+      font-weight: 650;
+      color: var(--color-slate-700);
+    }
+
+    & :where(h6) {
+      margin-top: 1.35rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.94rem;
+      line-height: 1.45;
+      font-weight: 650;
+      color: var(--color-slate-600);
+    }
+
+    & :where(p) {
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    & :where(a) {
+      text-decoration-line: underline;
+      text-decoration-thickness: from-font;
+      text-underline-offset: 0.18em;
+      text-decoration-skip-ink: auto;
+      overflow-wrap: anywhere;
+    }
+
+    & :where(strong) {
+      color: var(--color-slate-900);
+      font-weight: 650;
+    }
+
+    & :where(em) {
+      color: inherit;
+    }
+
+    & :where(del) {
+      color: var(--color-slate-500);
+      text-decoration-thickness: 0.08em;
+    }
+
+    & :where(mark) {
+      border-radius: 0.22em;
+      background: var(--article-mark-bg);
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      color: var(--article-mark-fg);
+      padding: 0.02em 0.2em;
+    }
+
+    & :where(sub, sup) {
+      font-size: 0.75em;
+      line-height: 0;
+    }
+
+    & :where(code):not(pre code) {
+      border: 1px solid var(--article-inline-code-border);
+      border-radius: 0.36em;
+      background-color: var(--article-inline-code-bg);
+      background-image: none;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      box-shadow: inset 0 -1px 0 var(--article-inline-code-shadow);
+      color: var(--article-inline-code-fg);
+      font-size: 0.9em;
+      font-weight: 500;
+      line-height: 1.45;
+      padding: 0.08em 0.34em;
+      overflow-wrap: break-word;
+    }
+
+    & :where(a code):not(pre code) {
+      border-color: var(--article-inline-code-border);
+      background-color: var(--article-inline-code-bg);
+      background-image: none;
+      color: var(--article-inline-code-link-fg);
+    }
+
+    & :where(code):not(pre code)::before,
+    & :where(code):not(pre code)::after {
+      content: none;
+    }
+
+    & :where(ul, ol) {
+      padding-inline-start: 1.35rem;
+    }
+
+    & :where(li) {
+      padding-inline-start: 0.15rem;
+      margin-top: 0.35rem;
+      margin-bottom: 0.35rem;
+    }
+
+    & :where(li)::marker {
+      color: color-mix(in oklab, var(--color-slate-500) 82%, transparent);
+      font-weight: 600;
+    }
+
+    & :where(li > ul, li > ol) {
+      margin-top: 0.45rem;
+      margin-bottom: 0.45rem;
+    }
+
+    & :where(.contains-task-list) {
+      padding-inline-start: 1.2rem;
+    }
+
+    & :where(.task-list-item) {
+      padding-inline-start: 0.15rem;
+    }
+
+    & :where(input[type='checkbox']) {
+      appearance: none;
+      display: inline-grid;
+      width: 1rem;
+      height: 1rem;
+      margin: 0 0.5rem 0 -1.2rem;
+      place-content: center;
+      vertical-align: -0.14em;
+      border: 1px solid rgb(148 163 184 / 0.72);
+      border-radius: 0.28rem;
+      background: rgb(248 250 252);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
+    }
+
+    & :where(input[type='checkbox']:checked) {
+      border-color: rgb(2 132 199);
+      background: rgb(2 132 199);
+    }
+
+    & :where(input[type='checkbox']:checked)::before {
+      content: '';
+      width: 0.58rem;
+      height: 0.58rem;
+      background: white;
+      clip-path: polygon(14% 46%, 0 61%, 38% 100%, 100% 18%, 84% 4%, 35% 70%);
+    }
+
+    & :where(blockquote) {
+      border-inline-start-width: 3px;
+      border-color: color-mix(in oklab, var(--color-sky-500) 45%, var(--color-slate-200));
+      background: color-mix(in oklab, var(--color-sky-50) 42%, transparent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.8rem 1rem;
+      color: var(--color-slate-700);
+      font-style: normal;
+    }
+
+    & :where(hr) {
+      margin-top: 2.4rem;
+      margin-bottom: 2.4rem;
+      border-color: color-mix(in oklab, var(--color-slate-300) 70%, transparent);
+    }
+
+    & > hr:has(+ .footnotes) {
+      display: none;
+    }
+
+    & :where(abbr[title]) {
+      text-decoration-line: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 0.18em;
+    }
+
+    & :where(kbd) {
+      border: 1px solid color-mix(in oklab, var(--color-slate-300) 78%, transparent);
+      border-radius: 6px;
+      background: var(--color-slate-50);
+      box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--color-slate-400) 30%, transparent);
+      color: var(--color-slate-700);
+      padding: 0.08rem 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+    }
+
+    & :where(details) {
+      border: 1px solid color-mix(in oklab, var(--color-slate-200) 82%, transparent);
+      border-radius: 8px;
+      background: color-mix(in oklab, var(--color-slate-50) 56%, transparent);
+      padding: 0.8rem 1rem;
+    }
+
+    & :where(summary) {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      cursor: pointer;
+      font-weight: 650;
+      color: var(--color-slate-800);
+      list-style: none;
+      touch-action: manipulation;
+    }
+
+    & summary::-webkit-details-marker {
+      display: none;
+    }
+
+    & :where(summary)::before {
+      content: '';
+      width: 0.5rem;
+      height: 0.5rem;
+      flex: 0 0 auto;
+      border-inline-end: 2px solid currentColor;
+      border-block-end: 2px solid currentColor;
+      opacity: 0.74;
+      transform: rotate(-45deg);
+      transition: transform 150ms ease-out;
+    }
+
+    & :where(details[open] > summary)::before {
+      transform: rotate(45deg);
+    }
+
+    & :where(details > :not(summary)) {
+      margin-inline-start: 1.05rem;
+    }
+
+    & :where(summary:focus-visible) {
+      outline: 2px solid var(--color-sky-700);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    & :where(.article-figure) {
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    & :where(.article-image, img:not(.not-prose img)) {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      outline: 1px solid oklch(0 0 0 / 0.1);
+      outline-offset: -1px;
+    }
+
+    & :where(figcaption) {
+      margin-top: 0.55rem;
+      color: var(--color-slate-500);
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+
+    & :where(.article-table-scroll) {
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      border: 1px solid color-mix(in oklab, var(--color-slate-200) 92%, transparent);
+      border-radius: 8px;
+      background-color: var(--article-scroll-edge-bg, white);
+      background-image:
+        linear-gradient(to right, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to right, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0));
+      background-attachment: local, local, scroll, scroll;
+      background-position:
+        0 0,
+        100% 0,
+        0 0,
+        100% 0;
+      background-repeat: no-repeat;
+      background-size:
+        1.75rem 100%,
+        1.75rem 100%,
+        0.9rem 100%,
+        0.9rem 100%;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--color-slate-500) 42%, transparent) transparent;
+    }
+
+    & :where(.article-table-scroll table) {
+      margin: 0;
+      width: max-content;
+      max-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+
+    & :where(th, td) {
+      white-space: normal;
+      overflow-wrap: break-word;
+      vertical-align: top;
+      padding: 0.625rem 0.75rem;
+    }
+
+    & :where(th) {
+      background: rgb(248 250 252);
+      color: var(--color-slate-800);
+      font-weight: 650;
+    }
+
+    & :where(thead th) {
+      border-bottom: 1px solid color-mix(in oklab, var(--color-sky-400) 42%, var(--color-slate-300));
+    }
+
+    & :where(tbody tr:nth-child(even) td) {
+      background: color-mix(in oklab, var(--color-slate-50) 60%, transparent);
+    }
+
+    & :where(tbody tr:hover td) {
+      background: color-mix(in oklab, var(--color-sky-50) 40%, transparent);
+    }
+
+    & :where(tbody tr + tr td) {
+      border-top: 1px solid color-mix(in oklab, var(--color-slate-200) 82%, transparent);
+    }
+
+    & :where(mjx-container:not([display='true'])) {
+      display: inline-block !important;
+      max-width: 100%;
+      overflow: visible;
+      vertical-align: -0.15em;
+    }
+
+    & :where(mjx-container:not([display='true']) > svg) {
+      display: inline-block !important;
+      vertical-align: -0.15em;
+    }
+
+    & :where(mjx-container[jax='SVG'][display='true']) {
+      display: block;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-inline: contain;
+      margin-inline: auto !important;
+      padding: 0.7rem 0.15rem;
+      background-color: var(--article-scroll-edge-bg, white);
+      background-image:
+        linear-gradient(to right, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to right, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0));
+      background-attachment: local, local, scroll, scroll;
+      background-position:
+        0 0,
+        100% 0,
+        0 0,
+        100% 0;
+      background-repeat: no-repeat;
+      background-size:
+        1.75rem 100%,
+        1.75rem 100%,
+        0.9rem 100%,
+        0.9rem 100%;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--color-sky-500) 48%, transparent) transparent;
+    }
+
+    & > pre {
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      border: 1px solid color-mix(in oklab, var(--color-slate-200) 92%, transparent);
+      border-radius: 8px;
+      background-color: var(--article-scroll-edge-bg, white);
+      background-image:
+        linear-gradient(to right, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-bg, white) 30%, rgb(255 255 255 / 0)),
+        linear-gradient(to right, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0)),
+        linear-gradient(to left, var(--article-scroll-edge-shadow), rgb(15 23 42 / 0));
+      background-attachment: local, local, scroll, scroll;
+      background-position:
+        0 0,
+        100% 0,
+        0 0,
+        100% 0;
+      background-repeat: no-repeat;
+      background-size:
+        1.75rem 100%,
+        1.75rem 100%,
+        0.9rem 100%,
+        0.9rem 100%;
+      padding: 1rem;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--color-slate-500) 42%, transparent) transparent;
+    }
+
+    & > pre > code {
+      display: block;
+      min-width: max-content;
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      line-height: 1.65;
+    }
+
+    & :where(mjx-container[jax='SVG'][display='true'] > svg) {
+      max-width: none;
+    }
+
+    & :where(.footnotes) {
+      margin-top: 2.8rem;
+      border-top: 1px solid color-mix(in oklab, var(--color-slate-300) 70%, transparent);
+      padding-top: 1.5rem;
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    & :where(.footnotes ol) {
+      padding-inline-start: 1.25rem;
+    }
+
+    & :where(.footnotes li) {
+      padding-inline-start: 0.15rem;
+    }
+
+    & :where(.data-footnote-backref) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      min-height: 1.5rem;
+      border: 1px solid color-mix(in oklab, var(--color-slate-300) 78%, transparent);
+      border-radius: 0.3rem;
+      background: color-mix(in oklab, var(--color-slate-50) 82%, transparent);
+      color: var(--color-sky-700);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.9rem;
+      font-variant-emoji: text;
+      line-height: 1;
+      text-decoration: none;
+      vertical-align: -0.3rem;
+    }
+  }
+
+  .dark .article-prose.prose {
+    --article-inline-code-fg: rgb(226 232 240);
+    --article-inline-code-bg: rgb(15 23 42 / 0.72);
+    --article-inline-code-border: rgb(148 163 184 / 0.42);
+    --article-inline-code-shadow: rgb(255 255 255 / 0.05);
+    --article-inline-code-link-fg: rgb(125 211 252);
+    --article-mark-bg: rgb(120 53 15 / 0.62);
+    --article-mark-fg: rgb(254 243 199);
+    color: rgb(226 232 240 / 0.88);
+
+    & ::selection {
+      background: color-mix(in oklab, var(--color-sky-400) 44%, transparent);
+      color: white;
+    }
+
+    & :where(strong) {
+      color: rgb(255 255 255 / 0.94);
+    }
+
+    & :where(h5) {
+      color: rgb(226 232 240 / 0.82);
+    }
+
+    & :where(h6) {
+      color: rgb(226 232 240 / 0.7);
+    }
+
+    & :where(del) {
+      color: rgb(226 232 240 / 0.58);
+    }
+
+    & :where(input[type='checkbox']) {
+      border-color: rgb(148 163 184 / 0.48);
+      background: rgb(15 23 42 / 0.72);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+    }
+
+    & :where(input[type='checkbox']:checked) {
+      border-color: rgb(56 189 248);
+      background: rgb(2 132 199);
+    }
+
+    & :where(blockquote) {
+      border-color: color-mix(in oklab, var(--color-sky-400) 48%, rgb(255 255 255 / 0.1));
+      background: rgb(14 165 233 / 0.08);
+      color: rgb(226 232 240 / 0.88);
+    }
+
+    & :where(hr) {
+      border-color: rgb(255 255 255 / 0.12);
+    }
+
+    & :where(kbd) {
+      border-color: rgb(255 255 255 / 0.14);
+      background: rgb(255 255 255 / 0.08);
+      box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.28);
+      color: rgb(255 255 255 / 0.82);
+    }
+
+    & :where(details) {
+      border-color: rgb(255 255 255 / 0.12);
+      background: rgb(15 23 42 / 0.28);
+    }
+
+    & :where(summary) {
+      color: rgb(255 255 255 / 0.88);
+    }
+
+    & :where(.article-image, img:not(.not-prose img)) {
+      outline-color: oklch(1 0 0 / 0.1);
+    }
+
+    & :where(figcaption) {
+      color: rgb(255 255 255 / 0.58);
+    }
+
+    & :where(.article-table-scroll) {
+      border-color: rgb(255 255 255 / 0.12);
+      scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+    }
+
+    & > pre {
+      border-color: rgb(255 255 255 / 0.12);
+      scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+    }
+
+    & :where(th) {
+      background: rgb(15 23 42 / 0.65);
+      color: rgb(255 255 255 / 0.9);
+    }
+
+    & :where(thead th) {
+      border-bottom-color: color-mix(in oklab, var(--color-sky-400) 36%, transparent);
+    }
+
+    & :where(tbody tr:nth-child(even) td) {
+      background: rgb(255 255 255 / 0.03);
+    }
+
+    & :where(tbody tr:hover td) {
+      background: color-mix(in oklab, var(--color-sky-400) 6%, transparent);
+    }
+
+    & :where(tbody tr + tr td) {
+      border-color: rgb(255 255 255 / 0.1);
+    }
+
+    & :where(mjx-container[jax='SVG'][display='true']) {
+      scrollbar-color: rgb(125 211 252 / 0.45) transparent;
+    }
+
+    & :where(.footnotes) {
+      border-color: rgb(255 255 255 / 0.12);
+    }
+
+    & :where(.data-footnote-backref) {
+      border-color: rgb(255 255 255 / 0.14);
+      background: rgb(255 255 255 / 0.08);
+      color: var(--color-sky-300);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .article-prose.prose
+      > :where(
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        ul,
+        ol,
+        dl,
+        blockquote,
+        details,
+        hr,
+        .footnotes,
+        .article-data-block
+      ) {
+      margin-left: var(--article-gutter, 1.25rem);
+      margin-right: auto;
+    }
+
+    .article-prose.prose :where(h1, h2, h3, h4, h5, h6) {
+      margin-left: var(--article-gutter, 1.25rem);
+      margin-right: auto;
+    }
+
+    .article-prose.prose > :where(.article-table-scroll) {
+      margin-left: var(--article-gutter, 1.25rem);
+      margin-right: auto;
+    }
+  }
+
+  html:lang(zh) .article-reading-surface {
+    --article-rail-max: var(--article-rail-max-zh, 56rem);
+  }
+}
+
+@layer components {
+  .blog-shell {
+    --blog-gap: clamp(22.5px, 1.18vw, 45px);
+    --blog-wide-width: clamp(1184px, 71.7vw, 2752px);
+    max-width: min(calc(100% - 30px), var(--blog-wide-width));
+  }
+
+  .header-shell {
+    --blog-wide-width: clamp(1184px, 71.7vw, 2752px);
+    max-width: 100%;
+  }
+
+  .blog-frame {
+    --blog-gap: clamp(22.5px, 1.18vw, 45px);
+    --blog-wide-width: clamp(1184px, 71.7vw, 2752px);
+    max-width: min(100%, 680px);
+  }
+
+  .blog-main-column,
+  .blog-sidebar-left,
+  .blog-sidebar-left-sticky,
+  .blog-sidebar-right {
+    min-width: 0;
+    background: transparent;
+  }
+
+  @media (min-width: 640px) {
+    .header-shell {
+      max-width: min(calc(100% - 30px), var(--blog-wide-width));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .blog-frame {
+      max-width: min(calc(100% - 30px), var(--blog-wide-width));
+      grid-template-columns: 23fr minmax(0, 54fr) 23fr;
+      column-gap: var(--blog-gap);
+      align-items: start;
+    }
+
+    .blog-main-column {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .blog-sidebar-left {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: stretch;
+    }
+
+    .blog-sidebar-left-sticky,
+    .blog-sidebar-right {
+      position: sticky;
+      top: 96px;
+      z-index: 20;
+      width: auto;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .blog-sidebar-right {
+      grid-column: 3;
+      grid-row: 1;
+    }
+  }
+
+  /* Keep these tokens in sync with lib/articleLayout.ts */
+  .article-shell {
+    --article-shell-max: 1440px;
+    --article-toc-width: 256px;
+    --article-toc-gap: 36px;
+    --article-tree-width: 256px;
+    --article-tree-gap: 36px;
+    --article-toc-breakpoint: 1024px;
+    --article-rail-max-en: 49rem;
+    --article-rail-max-zh: 56rem;
+    max-width: 100%;
+  }
+
+  .article-surface-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2rem;
+    justify-items: center;
+  }
+
+  .article-toc-mobile {
+    width: 100%;
+  }
+
+  .article-reading-surface {
+    --article-gutter: clamp(1.25rem, 5vw, 2.5rem);
+    --article-rail-max: var(--article-rail-max-en, 49rem);
+    --article-rail-width: min(calc(100% - (var(--article-gutter) * 2)), var(--article-rail-max));
+    --article-scroll-edge-bg: white;
+    --article-scroll-edge-shadow: rgb(15 23 42 / 0.16);
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+  }
+
+  .dark .article-reading-surface {
+    --article-scroll-edge-bg: var(--color-surface-card-dark);
+    --article-scroll-edge-shadow: rgb(255 255 255 / 0.16);
+  }
+
+  .article-content-rail {
+    box-sizing: border-box;
+    width: var(--article-rail-width);
+    max-width: var(--article-rail-width);
+    margin-inline: auto;
+  }
+
+  main[data-article-transition-destination='opening'] [data-article-transition-destination-only] {
+    opacity: 0;
+  }
+
+  main[data-article-transition-destination='revealed'] [data-article-transition-destination-only] {
+    opacity: 1;
+    transition: opacity 180ms ease-out;
+  }
+
+  /* Conceal the destination's own content for the whole flight. The reveal is
+     instant on purpose: each overlay exit-fades on top of the already-visible
+     real element, so identical content crossfades to a constant image. A
+     fade-in here would stack with the overlay's fade-out and dip below full
+     opacity mid-handoff — the visible "blink". The concealment also covers the
+     commit window: the route can commit while the underlay is still fading in,
+     and nothing new may show through it early. */
+  main[data-article-transition-destination='opening'] [data-article-surface],
+  main[data-content-tree-transition='opening'] .article-toc-desktop,
+  main[data-content-tree-transition='opening'] [data-article-content-tree],
+  main[data-content-tree-transition='opening'] [data-content-tree] {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  /* While the overlay flies the tree back to the sidebar, hide the whole real
+     sidebar card (background included), not just the tree content. Concealing
+     only the nav leaves the empty card visible for the entire return, and the
+     overlay's own card background then stacks on top of it as it fades in — a
+     visible flash. Hiding the card lets the overlay fully represent it until it
+     lands pixel-aligned; the reveal is instant because the overlay exit-fades
+     on top of the already-visible card (see the open-handoff rule above).
+     Layout is preserved (opacity, not display), so the return target can still
+     be measured from the real card. */
+  main[data-content-tree-transition-return='returning'] [data-content-tree-card] {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    main[data-article-transition-destination] [data-article-transition-destination-only] {
+      opacity: 1;
+      transition: none;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .article-shell {
+      max-width: min(calc(100% - 30px), var(--article-shell-max));
+    }
+
+    .article-reading-surface {
+      border-radius: 8px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .article-surface-layout {
+      position: relative;
+      grid-template-columns: var(--article-toc-width) minmax(0, 1fr) var(--article-tree-width);
+      column-gap: var(--article-toc-gap);
+      align-items: start;
+      justify-content: stretch;
+      justify-items: stretch;
+    }
+
+    .article-surface-layout > .article-toc-desktop {
+      grid-column: 1;
+      grid-row: 1;
+      position: sticky;
+      top: 112px;
+      justify-self: stretch;
+      width: var(--article-toc-width);
+      max-height: calc(100vh - 136px);
+      overflow-y: auto;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+    }
+
+    .article-surface-layout > .article-reading-surface {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: stretch;
+      width: 100%;
+    }
+
+    .article-surface-layout > .article-content-tree {
+      grid-column: 3;
+      grid-row: 1;
+      position: sticky;
+      top: 112px;
+      justify-self: stretch;
+      width: var(--article-tree-width);
+      max-height: calc(100vh - 136px);
+      overflow-y: auto;
+    }
+
+    .article-toc-desktop :where(h2) {
+      font-size: 0.75rem;
+      line-height: 1.35;
+      letter-spacing: 0.04em;
+    }
+
+    .article-content-rail {
+      margin-left: var(--article-gutter);
+      margin-right: auto;
+    }
+  }
+}
+
+.task-list-item::before {
+  @apply hidden;
+}
+
+.task-list-item {
+  @apply list-none;
+}
+
+.footnotes {
+  margin-top: 2.8rem;
+  border-top: 1px solid color-mix(in oklab, var(--color-slate-300) 70%, transparent);
+  padding-top: 1.5rem;
+}
+
+.dark .footnotes {
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+.data-footnote-backref {
+  text-decoration: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* https://stackoverflow.com/questions/61083813/how-to-avoid-internal-autofill-selected-style-to-be-applied */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+}
+
+.content-header {
+  position: relative;
+  padding-inline-end: 2rem;
+  scroll-margin-top: 6rem;
+}
+
+.content-header > a:has(.content-header-link) {
+  position: absolute;
+  inset-block-start: 0.08em;
+  inset-inline-end: 0;
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: color-mix(in oklab, var(--color-slate-500) 82%, transparent);
+  text-decoration: none;
+  opacity: 0.72;
+  transition:
+    opacity 150ms ease-out,
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.content-header > a:has(.content-header-link):hover,
+.content-header > a:has(.content-header-link):focus-visible,
+.content-header:target > a:has(.content-header-link) {
+  opacity: 1;
+  color: var(--color-sky-700);
+  background-color: color-mix(in oklab, var(--color-sky-100) 68%, transparent);
+}
+
+.dark .content-header > a:has(.content-header-link) {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.dark .content-header > a:has(.content-header-link):hover,
+.dark .content-header > a:has(.content-header-link):focus-visible,
+.dark .content-header:target > a:has(.content-header-link) {
+  color: var(--color-sky-300);
+  background-color: rgb(125 211 252 / 0.12);
+}
+
+@media (min-width: 40rem) {
+  .content-header {
+    padding-inline-end: 0;
+  }
+
+  .content-header > a:has(.content-header-link) {
+    inset-inline-start: -2rem;
+    inset-inline-end: auto;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .content-header > a:has(.content-header-link) {
+    opacity: 0;
+  }
+
+  .content-header:hover > a:has(.content-header-link),
+  .content-header > a:has(.content-header-link):focus-visible,
+  .content-header > a:has(.content-header-link):hover {
+    opacity: 1;
+  }
+}
+
+.content-header-link,
+.linkicon {
+  display: inline-block;
+  vertical-align: middle;
+}

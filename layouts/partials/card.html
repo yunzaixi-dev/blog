@@ -1,3 +1,0 @@
-<li><a class="card" href="{{ .RelPermalink }}"><div class="meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006 年 1 月 2 日" }}</time><span>· {{ .ReadingTime }} 分钟阅读</span></div>
-<h3>{{ .Title }}</h3><p>{{ with .Description }}{{ . }}{{ else }}{{ .Summary | plainify | truncate 140 }}{{ end }}</p>
-{{ with .Params.tags }}<div class="tags">{{ range . }}<span class="tag">#{{ . }}</span>{{ end }}</div>{{ end }}</a></li>

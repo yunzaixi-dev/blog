@@ -1,0 +1,181 @@
+/* Code block styles for MDX output highlighted by rehype-pretty-code + Shiki. */
+
+figure[data-rehype-pretty-code-figure] {
+  @apply dark:border-border-subtle-dark dark:bg-surface-code-dark my-7 overflow-hidden rounded-[10px] border border-slate-200/90 bg-slate-100/70;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.05),
+    0 8px 24px -12px rgb(15 23 42 / 0.12);
+}
+
+.dark figure[data-rehype-pretty-code-figure] {
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 12px 32px -16px rgb(0 0 0 / 0.55);
+}
+
+/* Bare language logo / text fallback — no badge chrome. */
+figure[data-rehype-pretty-code-figure] .code-language-mark {
+  @apply inline-flex shrink-0 items-center text-slate-400 dark:text-white/45;
+}
+
+figure[data-rehype-pretty-code-figure] .code-language-mark svg {
+  @apply h-3.5 w-3.5;
+}
+
+figure[data-rehype-pretty-code-figure] .code-language-label {
+  @apply shrink-0 font-sans text-[0.62rem] font-semibold tracking-wide text-slate-400 dark:text-white/45;
+}
+
+figure[data-rehype-pretty-code-figure] .code-header {
+  @apply border-b border-slate-200/80 bg-white/60 dark:border-white/10 dark:bg-white/[0.03];
+}
+
+figure[data-rehype-pretty-code-figure] .code-header + pre {
+  padding-top: 0.5rem;
+}
+
+figure[data-rehype-pretty-code-figure] pre {
+  @apply m-0 max-w-full overflow-x-auto px-0 pt-4 pb-4 text-sm leading-6;
+  --code-scroll-edge-bg: var(--shiki-light-bg, rgb(248 250 252));
+  --code-scroll-edge-shadow: rgb(15 23 42 / 0.18);
+  width: calc(100% + 2px);
+  max-width: calc(100% + 2px);
+  margin-inline: -1px;
+  background-color: var(--code-scroll-edge-bg);
+  background-image:
+    linear-gradient(to right, var(--code-scroll-edge-bg) 30%, rgb(255 255 255 / 0)),
+    linear-gradient(to left, var(--code-scroll-edge-bg) 30%, rgb(255 255 255 / 0)),
+    linear-gradient(to right, var(--code-scroll-edge-shadow), rgb(15 23 42 / 0)),
+    linear-gradient(to left, var(--code-scroll-edge-shadow), rgb(15 23 42 / 0));
+  background-attachment: local, local, scroll, scroll;
+  background-position:
+    0 0,
+    100% 0,
+    0 0,
+    100% 0;
+  background-repeat: no-repeat;
+  background-size:
+    1.75rem 100%,
+    1.75rem 100%,
+    0.9rem 100%,
+    0.9rem 100%;
+  color: var(--shiki-light);
+  scrollbar-color: color-mix(in oklab, var(--shiki-light) 28%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+figure[data-rehype-pretty-code-figure] pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+figure[data-rehype-pretty-code-figure] pre::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--shiki-light) 24%, transparent);
+}
+
+figure[data-rehype-pretty-code-figure] pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+figure[data-rehype-pretty-code-figure] pre ::selection,
+figure[data-rehype-pretty-code-figure] pre::selection {
+  background: color-mix(in oklab, var(--color-sky-500) 30%, transparent);
+}
+
+figure[data-rehype-pretty-code-figure] code {
+  @apply grid min-w-full bg-transparent px-0 font-mono text-[0.86rem];
+  counter-reset: line;
+}
+
+code[data-theme],
+code[data-theme] span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg, transparent);
+  font-style: var(--shiki-light-font-style, inherit);
+  font-weight: var(--shiki-light-font-weight, inherit);
+  text-decoration: var(--shiki-light-text-decoration, inherit);
+}
+
+.dark figure[data-rehype-pretty-code-figure] pre {
+  --code-scroll-edge-bg: var(--shiki-dark-bg, var(--color-surface-code-dark));
+  --code-scroll-edge-shadow: rgb(255 255 255 / 0.18);
+  color: var(--shiki-dark);
+  scrollbar-color: color-mix(in oklab, var(--shiki-dark) 28%, transparent) transparent;
+}
+
+.dark figure[data-rehype-pretty-code-figure] pre::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--shiki-dark) 24%, transparent);
+}
+
+.dark code[data-theme],
+.dark code[data-theme] span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg, transparent);
+  font-style: var(--shiki-dark-font-style, inherit);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+  text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+
+code[data-line-numbers] > [data-code-line]::before {
+  @apply mr-4 inline-block w-6 shrink-0 text-right text-slate-400/90 tabular-nums select-none dark:text-white/30;
+  counter-increment: line;
+  content: counter(line);
+}
+
+[data-code-line] {
+  @apply block min-h-6 min-w-max border-l-2 border-transparent px-4;
+  width: 100%;
+}
+
+code[data-theme] [data-code-line],
+code[data-theme] [data-code-line] span {
+  background-color: transparent;
+}
+
+[data-highlighted-line] {
+  @apply border-sky-500 bg-sky-100/70 dark:bg-sky-500/15;
+}
+
+[data-highlighted-chars] {
+  @apply rounded-[4px] bg-sky-200/70 px-1 py-0.5 ring-1 ring-sky-300/60 dark:bg-sky-400/20 dark:ring-sky-300/25;
+}
+
+code[data-theme] [data-diff-line='add'] {
+  border-color: #1a7f37;
+  background-color: #dafbe1;
+}
+
+code[data-theme] [data-diff-line='remove'] {
+  border-color: #cf222e;
+  background-color: #ffebe9;
+}
+
+code[data-theme] [data-diff-line='hunk'] {
+  border-color: #0969da;
+  background-color: #ddf4ff;
+}
+
+code[data-theme] [data-diff-line='meta'] {
+  border-color: #57606a;
+  background-color: #f6f8fa;
+}
+
+.dark code[data-theme] [data-diff-line='add'] {
+  border-color: #3fb950;
+  background-color: rgba(46, 160, 67, 0.32);
+}
+
+.dark code[data-theme] [data-diff-line='remove'] {
+  border-color: #f85149;
+  background-color: rgba(248, 81, 73, 0.3);
+}
+
+.dark code[data-theme] [data-diff-line='hunk'] {
+  border-color: #58a6ff;
+  background-color: rgba(56, 139, 253, 0.28);
+}
+
+.dark code[data-theme] [data-diff-line='meta'] {
+  border-color: #8b949e;
+  background-color: rgba(110, 118, 129, 0.24);
+}

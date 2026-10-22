@@ -1,31 +1,41 @@
-# zaixi.dev blog
+# zaixi.dev
 
-Hugo 0.168.0，主题内置于 layouts/，无 Node/子模块。推送 `main` → GitHub Actions 构建 → `scripts/pages_deploy.py` 通过 Pages Direct Upload API 增量直传（项目 `zaixi-blog`）。
+纯粹的技术博客。Next.js App Router + Contentlayer + Tailwind CSS 静态导出，部署在 Cloudflare Pages。
 
 - `main` → https://zaixi.dev/
-- `dev` → https://dev.zaixi.dev/
+- `dev` → https://dev.zaixi.dev/（禁止索引）
 
-## 常用命令（Taskfile）
+推送后由 GitHub Actions 在 [Sengi](https://sengi.run) runner 上构建，`scripts/pages_deploy.py` 只上传变化的文件。
 
-需安装 [go-task](https://taskfile.dev/installation/)：`curl -fsSL https://taskfile.dev/install.sh | sh`
+## 常用命令
 
-```bash
-task --list          # 列出任务
-task serve           # 本地预览
-task build           # 构建到 public/
-task new-post SLUG=my-post
-task webp IN=clip.mp4          # 视频→ static/forum/*.webp（需 ffmpeg）
-task forum:upload FILE=a.webp  # 拷贝 webp 到论坛目录
-task clean
-```
-
-本地直传（一般用 Git push 即可）：`task deploy-dev` / `task deploy-prod`（需 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`）。
-
-论坛动态 WebP 说明见 [`static/forum/README.md`](static/forum/README.md)。
-
-## 不用 Taskfile 时
+需要 Node.js 22、pnpm 和 [go-task](https://taskfile.dev/installation/)。
 
 ```bash
-hugo server
-hugo --minify
+task install                      # 安装依赖
+task serve                        # 开发预览 http://localhost:3001
+task new-post SLUG=my-post CATEGORY=工程 TITLE="标题"
+task images                       # 加了配图后生成多尺寸 WebP
+task build                        # 构建到 out/
+task check                        # 全部检查（CI 同款）
+
+task export:list                  # 可导出的文章
+task export:forum SLUG=my-post    # 论坛 Markdown（图片为完整 URL）→ 剪贴板
+task export:x SLUG=my-post        # X 文章富文本 → 剪贴板，图片 → ~/Downloads/x-export/<slug>/
+
+task webp IN=clip.mp4             # 视频 → 论坛动态 WebP（public/forum/）
+task deploy:fast                  # 不等 CI，从 box 直传
 ```
+
+论坛 Markdown 也随站点发布在 `https://zaixi.dev/export/zh/<分类>/<slug>.md`，手机上也能直接复制。
+
+## 文档
+
+- [软件架构](docs/architecture.md)
+- [部署](docs/deployment.md)
+- [本地开发](docs/development.md)
+- [架构决策记录](docs/decisions.md)
+
+## 致谢
+
+站点代码基于 [mizorewww/blog](https://github.com/mizorewww/blog)，它源自 [timlrx/tailwind-nextjs-starter-blog](https://github.com/timlrx/tailwind-nextjs-starter-blog)，均以 MIT 许可发布，见 [LICENSE](LICENSE)。文章内容与图片版权归本站作者所有。

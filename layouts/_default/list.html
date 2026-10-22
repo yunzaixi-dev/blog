@@ -1,2 +1,0 @@
-{{ define "main" }}<div class="wrap"><header class="page-head"><p class="eyebrow">{{ if eq .Kind "term" }}标签{{ else }}Archive{{ end }}</p><h1>{{ if eq .Kind "term" }}#{{ end }}{{ .Title }}</h1></header>
-<ul class="posts" style="padding-bottom:5rem">{{ range .Pages }}{{ partial "card.html" . }}{{ end }}</ul></div>{{ end }}

@@ -1,0 +1,3 @@
+pnpm icons:generate
+git add lib/generated/lucide-icons.ts
+pnpm lint-staged
