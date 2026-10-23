@@ -59,11 +59,13 @@ export default function PostLayout({
         <div
           className="article-reading-surface dark:bg-surface-card-dark relative z-0 min-w-0 overflow-hidden bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.04),0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-950/5 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.06)] dark:ring-white/10"
           data-article-surface
+          data-pagefind-body
         >
           <header className="article-header min-w-0">
             <div
               className="dark:bg-surface-cover-dark relative aspect-[2/1] overflow-hidden bg-slate-100 sm:aspect-[2.8/1]"
               data-article-cover
+              data-pagefind-ignore="all"
             >
               <ResponsiveImage
                 src={post.image || siteMetadata.socialBanner}

@@ -52,7 +52,7 @@ export default function ArticleGitMeta({
   }
 
   return (
-    <div className={classes.git}>
+    <div className={classes.git} data-pagefind-ignore="all">
       {showOverview && hasOverview && (
         <div className={classes.gitRow}>
           {updatedAt && (
