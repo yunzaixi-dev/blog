@@ -264,5 +264,6 @@
 - 新增导出：`pnpm export forum|x <slug>` 生成论坛 Markdown（图片为绝对 URL）与 X 文章富文本（图片按顺序落盘，正文用【图 NN】标记位置）；postbuild 把论坛 Markdown 发布到 `/export/`（noindex）。
 - 文章图片放在 `public/static/images/<slug>/`，图片优化脚本改为递归扫描；旧 Hugo URL 全部 301 到新路由。
 - 开发服务器端口改为 3001（本机 3000 被 OpenChamber 占用）。
+- husky pre-push 从 `pnpm verify` 改为 `pnpm check`：e2e 套件依赖原站的示例文章（小米笔记本、折腾分类等），一次运行超过 20 分钟且必然失败；改写为本站内容之前，e2e 手动运行。
 
 **后果**：上线时间取决于一次 `pnpm build`（本地约 26 秒）与增量上传；检查失败需要人工关注 Actions 结果。X 文章没有公开的草稿 API，导出依赖粘贴富文本和手动插图。仓库连接 Sengi 项目前，CI job 会一直排队。
