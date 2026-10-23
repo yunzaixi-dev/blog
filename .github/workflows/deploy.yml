@@ -11,7 +11,7 @@ concurrency:
 jobs:
   # The release path does only what reaching the site needs; checks run beside it.
   deploy:
-    runs-on: sengi-standard-2-ubuntu-2404
+    runs-on: sengi-standard-4-ubuntu-2404
     permissions: { contents: read }
     steps:
       - uses: actions/checkout@v4
