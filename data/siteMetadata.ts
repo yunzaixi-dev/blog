@@ -32,8 +32,8 @@ const siteMetadata: SiteMetadata = {
   socialBanner: '/static/images/avatar.jpg',
   email: '',
   github: 'https://github.com/yunzaixi-dev',
-  x: '',
-  telegram: '',
+  x: 'https://x.com/big_blue_fish',
+  telegram: 'https://t.me/blue_big_fish',
   analytics: {
     umami: {
       websiteId: process.env.NEXT_UMAMI_ID,
