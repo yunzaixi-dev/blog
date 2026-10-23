@@ -14,6 +14,7 @@ import { getPostModifiedDate, getPostPublishedDate } from '@/lib/postDates'
 import { localizedPostAlternates } from '@/lib/seo/alternates'
 import { createArticleJsonLd } from '@/lib/structuredData'
 import { absoluteSiteUrl } from '@/lib/urls'
+import { xCreator } from 'app/seo'
 import PostLayout from '@/layouts/PostLayout'
 
 export async function generateMetadata(props: {
@@ -73,6 +74,7 @@ export async function generateMetadata(props: {
       title: post.title,
       description: post.summary,
       images: imageUrls,
+      creator: xCreator,
     },
   }
 }

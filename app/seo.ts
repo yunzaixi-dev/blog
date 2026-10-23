@@ -12,6 +12,11 @@ type PageSEOProps = Omit<Metadata, 'title' | 'description' | 'openGraph' | 'twit
   twitter?: Metadata['twitter']
 }
 
+/** The X handle shown as the card's author, e.g. @big_blue_fish. */
+export const xCreator = siteMetadata.x
+  ? `@${new URL(siteMetadata.x).pathname.split('/')[1]}`
+  : undefined
+
 export function ogLocale(locale: Locale = defaultLocale) {
   return localeConfig[locale].htmlLang.replace('-', '_')
 }
@@ -48,6 +53,7 @@ export function genPageMetadata({
       title: `${title} | ${siteMetadata.title}`,
       card: 'summary_large_image',
       images: imageUrls,
+      creator: xCreator,
       ...twitter,
     },
     ...metadata,
