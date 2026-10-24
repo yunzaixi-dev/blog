@@ -43,7 +43,30 @@ try {
   const media = page.locator('article img').first()
   if (await media.count()) {
     const src = await media.getAttribute('src')
-    assert.ok(src?.includes('/releases/'), `Expected immutable media URL, got ${src}`)
+    assert.ok(src, 'Article media must have a source')
+    // A default cover may use the stable API alias; validate the actual redirect
+    // target and image bytes, not just the authored src string.
+    const response = await page.request.get(src)
+    assert.equal(response.status(), 200, `Media request failed: ${src}`)
+    assert.ok(response.headers()['content-type']?.startsWith('image/'))
+    const publication = await page.request.get(
+      `${process.env.API_BASE_URL || 'http://127.0.0.1:45141'}/api/page?path=/zh/`
+    )
+    assert.equal(publication.status(), 200)
+    const revision = publication.headers()['x-content-revision']
+    assert.ok(revision, 'API must identify the committed release')
+    const finalURL = new URL(response.url())
+    const mediaBase = new URL(process.env.MEDIA_BASE_URL || response.url())
+    assert.equal(finalURL.origin, mediaBase.origin)
+    assert.ok(
+      finalURL.pathname.includes(`/releases/${revision}/`),
+      `Unexpected media target: ${response.url()}`
+    )
+    await media.evaluate(async (image) => {
+      if (!(image instanceof HTMLImageElement)) throw new Error('Expected an image')
+      await image.decode()
+      if (image.naturalWidth === 0) throw new Error('Image did not decode')
+    })
   }
   await page.goto('http://127.0.0.1:45140/zh/nonexistent-cross-origin/')
   await page.locator('[data-not-found-code]').waitFor()
