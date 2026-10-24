@@ -3,8 +3,9 @@ import { mkdtemp, mkdir, writeFile, stat, utimes, rm, readFile, readdir } from '
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import path from 'node:path'
+import os from 'node:os'
 
-const directory = await mkdtemp('/tmp/opencode/blog-runtime-')
+const directory = await mkdtemp(path.join(os.tmpdir(), 'blog-runtime-'))
 const content = path.join(directory, 'content')
 await mkdir(path.join(content, 'blog', 'zh', '测试'), { recursive: true })
 const file = path.join(content, 'blog', 'zh', '测试', 'fresh.md')

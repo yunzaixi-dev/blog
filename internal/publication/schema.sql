@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS publication (
 INSERT INTO publication(id,phase) VALUES(1,'syncing') ON CONFLICT DO NOTHING;
 INSERT INTO schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
 DO $$ BEGIN
+  IF current_database()='blog' AND current_user='blog_migrator' THEN
+    REVOKE CONNECT,TEMPORARY ON DATABASE blog FROM PUBLIC;
+    GRANT CONNECT ON DATABASE blog TO blog_reader,blog_publisher,blog_migrator;
+  END IF;
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='blog_reader') THEN
     GRANT USAGE ON SCHEMA public TO blog_reader;
     GRANT SELECT ON releases,publication TO blog_reader;

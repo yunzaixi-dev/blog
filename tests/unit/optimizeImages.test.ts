@@ -1,11 +1,12 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, writeFile, stat, rm } from 'node:fs/promises'
 import path from 'node:path'
+import os from 'node:os'
 import sharp from 'sharp'
 import { expect, it } from 'vitest'
 
 it('converts new PNG once, leaves existing WebP untouched, and checks actual decoding', async () => {
-  const root = await mkdtemp('/tmp/opencode/images-idempotent-')
+  const root = await mkdtemp(path.join(os.tmpdir(), 'images-idempotent-'))
   const directory = path.join(root, 'public/static/images')
   const script = path.resolve('scripts/optimize-images.mjs')
   try {
