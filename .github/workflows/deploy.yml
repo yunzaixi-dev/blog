@@ -51,7 +51,9 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - name: Start isolated PostgreSQL, Typesense and S3
-        run: docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
+        run: |
+          chmod a+r .devcontainer/s3-local.json
+          docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
       - name: Exercise the real publication pipeline
         env:
           DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
@@ -123,7 +125,9 @@ jobs:
       - name: Smoke-test the built image with independent mounted content
         run: node scripts/test-container.mjs "$IMAGE"
       - name: Start image publication dependencies
-        run: docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
+        run: |
+          chmod a+r .devcontainer/s3-local.json
+          docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
       - name: Verify the production image and real Git-worktree hook
         env:
           DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
