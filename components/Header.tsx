@@ -69,13 +69,13 @@ const Header = ({ hideOnMobile = false }: { hideOnMobile?: boolean }) => {
   return (
     <SlideHeader
       hidden={shouldHide}
-      className={`dark:bg-surface-card-dark/95 fixed inset-x-0 top-0 z-50 w-full bg-white/90 shadow-sm shadow-slate-200/70 backdrop-blur lg:translate-y-0 lg:opacity-100 dark:shadow-none ${
+      className={`dark:bg-surface-card-dark lg:dark:bg-surface-card-dark/95 fixed inset-x-0 top-0 z-50 w-full bg-white shadow-sm shadow-slate-200/70 lg:translate-y-0 lg:bg-white/90 lg:opacity-100 lg:backdrop-blur dark:shadow-none ${
         shouldHide ? 'pointer-events-none lg:pointer-events-auto' : ''
       }`}
     >
       <div
         ref={headerShellRef}
-        className="header-shell relative mx-auto flex w-full items-center justify-between gap-x-2 px-3 py-2 md:px-6 lg:flex-nowrap lg:gap-x-7 lg:px-0 lg:py-4"
+        className="header-shell relative mx-auto flex w-full flex-wrap items-center justify-between gap-x-2 px-3 py-2 md:px-6 lg:flex-nowrap lg:gap-x-7 lg:px-0 lg:py-4"
       >
         <div data-header-logo className="z-10 shrink-0">
           <HeaderLogo />

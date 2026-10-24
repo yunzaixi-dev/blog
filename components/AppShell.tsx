@@ -116,7 +116,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [cardSequence, setCardSequence] = useState<ArticleTransitionSequence | null>(null)
   const [cardSession, setCardSession] = useState(0)
   const [hideHeaderOnMobile, setHideHeaderOnMobile] = useState(false)
-  const previousScrollYRef = useRef(0)
   const mainRef = useRef<HTMLElement>(null)
   const routeFocusReadyRef = useRef(false)
   const transitionStateRef = useRef<ArticleTransitionState>(transitionState)
@@ -608,31 +607,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [pathname, treeTransitionState])
 
   useEffect(() => {
-    previousScrollYRef.current = window.scrollY
     setHideHeaderOnMobile(false)
 
     if (!isReadingPost) {
       return
     }
 
+    let previousScrollY = window.scrollY
+    let hidden = false
+    let frame = 0
+    const media = window.matchMedia('(max-width: 1023px)')
     const syncHeaderVisibility = () => {
+      frame = 0
       const currentScrollY = window.scrollY
-      const scrollDelta = currentScrollY - previousScrollYRef.current
+      const scrollDelta = currentScrollY - previousScrollY
+      let nextHidden = hidden
 
       if (currentScrollY <= SCROLL_DELTA_THRESHOLD) {
-        setHideHeaderOnMobile(false)
+        nextHidden = false
       } else if (scrollDelta > SCROLL_DELTA_THRESHOLD && currentScrollY > HEADER_HIDE_SCROLL_Y) {
-        setHideHeaderOnMobile(true)
+        nextHidden = true
       } else if (scrollDelta < -SCROLL_DELTA_THRESHOLD) {
-        setHideHeaderOnMobile(false)
+        nextHidden = false
       }
 
-      previousScrollYRef.current = currentScrollY
+      if (nextHidden !== hidden) {
+        hidden = nextHidden
+        setHideHeaderOnMobile(hidden)
+      }
+      previousScrollY = currentScrollY
     }
+    const onScroll = () => {
+      if (media.matches && frame === 0) frame = window.requestAnimationFrame(syncHeaderVisibility)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
 
-    window.addEventListener('scroll', syncHeaderVisibility, { passive: true })
-
-    return () => window.removeEventListener('scroll', syncHeaderVisibility)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (frame !== 0) window.cancelAnimationFrame(frame)
+    }
   }, [isReadingPost])
 
   return (

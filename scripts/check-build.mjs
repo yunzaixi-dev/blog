@@ -21,15 +21,31 @@ assert.ok(
 )
 const html = await readFile('out/index.html', 'utf8')
 assert.ok(!html.includes('data-article-body'), 'Article bodies must not be built into HTML')
+let hasCompilerMemoization = false
 for (const [key, entry] of Object.entries(manifest)) {
   assert.ok(
     !/(content\/blog|server\/|content-pipeline\/)/.test(key),
     'Runtime content/compiler must not enter browser graph'
   )
   const code = await readFile(`out/${entry.file}`, 'utf8')
+  if (entry.isEntry && code.includes('react.memo_cache_sentinel')) hasCompilerMemoization = true
   assert.ok(
     !/function MDXContent|bodyCode|@mdx-js\/mdx/.test(code),
     'Executable MDX must not be delivered'
   )
 }
+assert.ok(hasCompilerMemoization, 'React Compiler must emit component memoization into the client')
+const compiled = JSON.parse(await readFile('out/.vite/react-compiler.json', 'utf8'))
+for (const file of [
+  'components/HeaderLogo.tsx',
+  'components/BackToTop.tsx',
+  'components/ArticleTableOfContents.tsx',
+  'components/animata/ArticleCardTransitionOverlay.tsx',
+]) {
+  assert.ok(
+    compiled.some((/** @type {string} */ symbol) => symbol.startsWith(`${file}:`)),
+    `${file} must be compiled, not silently skipped`
+  )
+}
+console.log(`React Compiler verified: ${compiled.length} compiled components/hooks`)
 console.log('Client graph verified: API-only bodies, no content compiler, ECharts async-only')

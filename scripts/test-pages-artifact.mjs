@@ -39,6 +39,10 @@ const headers = await readFile('out/_headers', 'utf8')
 assert.ok(
   headers.includes('https://api.zaixi.dev') && headers.includes('https://blog-media.zaixi.dev')
 )
+const shell = await readFile('out/index.html', 'utf8')
+const routes = JSON.parse(await readFile('data/pagesMigrationRoutes.json', 'utf8'))
+assert.equal(routes.length, 36)
+for (const route of routes) assert.equal(await readFile(`out${route}index.html`, 'utf8'), shell)
 console.log(
   'Pages artifact passed historical redirects, resource forwarding, SPA ordering and API/R2 CSP'
 )

@@ -2,6 +2,7 @@ FROM golang:1.26.10-bookworm AS go
 FROM node:24-bookworm
 COPY --from=go /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:/home/node/go/bin:$PATH
+ENV npm_config_store_dir=/home/node/.local/share/pnpm/store
 RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends \
     git ca-certificates curl postgresql-client python3 sudo \
     && rm -rf /var/lib/apt/lists/*

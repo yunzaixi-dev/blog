@@ -3,11 +3,12 @@ import { spawn } from 'node:child_process'
 /**
  * @param {string} command
  * @param {string[]} args
+ * @param {NodeJS.ProcessEnv} [env]
  * @returns {Promise<void>}
  */
-export function run(command, args) {
+export function run(command, args, env = process.env) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit' })
+    const child = spawn(command, args, { stdio: 'inherit', env })
     const stop = () => child.kill('SIGTERM')
     process.once('SIGINT', stop)
     process.once('SIGTERM', stop)

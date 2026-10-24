@@ -1,18 +1,23 @@
+# syntax=docker/dockerfile:1
 FROM node:24-bookworm-slim AS build
 RUN corepack enable && corepack install --global pnpm@11.3.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=blog-pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir=/pnpm/store
 COPY . .
-RUN pnpm exec vite build && pnpm exec vite build --config vite.worker.config.ts
+RUN node scripts/build-assets.mjs
 
 FROM golang:1.26.10-bookworm AS go-build
 WORKDIR /app
 COPY go.mod ./
 COPY go.sum ./
+RUN --mount=type=cache,id=blog-go-mod,target=/go/pkg/mod go mod download
 COPY cmd ./cmd
 COPY internal ./internal
-RUN CGO_ENABLED=0 go build -trimpath -o /blog ./cmd/blog
+RUN --mount=type=cache,id=blog-go-mod,target=/go/pkg/mod \
+    --mount=type=cache,id=blog-go-build,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -o /blog ./cmd/blog
 
 FROM registry.k8s.io/git-sync/git-sync@sha256:a20644562fba94773e594885cb001aadb5a3172175f13ac1215e5b2033c9200e AS git-sync
 FROM node:24-trixie-slim

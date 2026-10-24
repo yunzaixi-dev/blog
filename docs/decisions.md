@@ -354,3 +354,13 @@ git-sync v4.8 调用新版 `git config list`，Bookworm 的 Git 2.39 不支持�
 用户要求 CI/CD 优化到三十秒内。实际云端构建超过两分钟，整镜像 artifact 下载与上传又耗数分钟；仅迁移测试不足以达标。改为本地 devcontainer 验证并保留已测镜像与生产 Pages artifact，`release:local` 将精确 image ID 推到 Zot，不重建；main 必须本地重新验证对应干净 SHA，旧或 dirty 报告直接拒绝。
 
 云端只做 checkout、SHA/diff 检查，手动确认仅 HEAD 已存在的 digest。三十秒是实际提交至完成的验收指标，排队计入，不保证任意冷启动或网络条件下恒定达标。构建、上传及集群 rollout 的时间仍如实单独报告，不把它们改名隐藏。后端就绪后才部署同 SHA 的 Pages；当前已发布的修复镜像继续完成本次上线，不为策略调整额外重建。
+
+## ADR-0025 React Compiler 与受资源约束的并行构建
+
+日期：2026-10-24
+
+**决策**：React 19 客户端通过 `@vitejs/plugin-react` 5.2.0 的首个 Babel 插件启用稳定版 `babel-plugin-react-compiler` 1.0.0；不升级 Vite 主版本，不给私有内容 worker 引入 React 编译。构建检查要求入口包含实际 memoization，避免只添加依赖却未生效。依赖官方仓库证据：`facebook/react` 251,744 stars，`vitejs/vite-plugin-react` 1,174 stars，均超过 1,000 门槛。配置依据 React 官方 Compiler installation 与插件 5.x 文档。
+
+移动端保持卡片 FLIP、返回凭证和浏览器滚动恢复合同；顶栏按帧合并并仅在可见状态变化时提交，隐藏或关闭的目录不测量标题，手机顶栏不再使用全宽 backdrop blur。品牌在所有断点使用纯文本系统衬线字体，不下载新字体。
+
+前端、worker、Go 构建并行，预算按可用 CPU／cgroup 配额和当前可用内存分配，不给生产进程强加构建设置。BuildKit 持久缓存 pnpm 与 Go 编译输入；云端无构建的合同不变。Pages 每次保留迁移时已有的 36 个静态路径到新版同字节壳的映射，防止重新发布后旧 HTML 复现；固定迁移清单不增加未来发文对应用构建的依赖。

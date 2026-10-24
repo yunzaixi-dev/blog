@@ -16,6 +16,8 @@ pnpm build
 
 保留 `dist/`、`out/`、`node_modules/`、`package.json` 的相对位置。worker 入口默认 `dist/worker/content-worker.mjs`，可以用 `--worker` 指定。HTTP 只由 Go 监听，Node 通过私有 stdin/stdout 通信，不开放额外端口。服务启动校验内容，坏内容或缺失目录直接启动失败；运行中坏内容返回 503，修好后下一请求恢复。SIGINT/SIGTERM 优雅关闭 HTTP 与所属 worker。
 
+构建按 CPU affinity、cgroup v2 CPU 配额和 Node 报告的当前可用内存分配资源。前端、私有 worker 与 Go 并行；每个 Node 构建堆和 Go 软内存预算各占可用内存四分之一，余量留给原生分配和系统。Go 包并行度还按每包 256 MiB 约束，避免小内存容器照搬宿主核数。预算仅传给构建子进程，不改变生产运行时。Docker 使用 BuildKit pnpm store、Go modules 与编译缓存，云端继续只做轻量检查。
+
 ## 容器与持久内容
 
 ```bash
@@ -60,6 +62,8 @@ PR、dev、main 的自动云端检查均不发布镜像或部署。main 合并�
 GitHub Actions 手动运行 `sengi-release` 时提供完整 `commit_sha` 和已发布 `image_digest`，只校验 manifest，不推镜像或 Pages。云端 job 只有 `contents: read`；registry secrets 只用于认证 HEAD，不执行构建代码，不拉镜像层。registry 身份为博客专用 `blog-push`，迁移、API 和 importer 使用 namespace `blog` 的 `blog-registry` imagePullSecret，其 `blog-pull` 身份仅有该路径 read 权限，不复制其他应用凭据。
 
 只改 `content/**`、`public/static/images/**` 或 `public/forum/**` 不触发应用流水线；文章交付必须走独立内容同步。`pnpm test:container <image>` 可本地重跑实际镜像 smoke，覆盖 Go/私有 worker、静态壳、只读挂载内容修改/删除、媒体读取和 SIGTERM 退出，不把仓库文章打进镜像。
+
+Pages 迁移时留下的 36 个公开 HTML 路径记录在 `data/pagesMigrationRoutes.json`。`prepare-pages.mjs` 在这些路径写入与根目录字节相同的应用壳，防止原有静态路径保留旧版本；不嵌入文章、不请求线上 sitemap，也不让后续独立发文依赖构建。
 
 ## 代理、缓存与安全
 
