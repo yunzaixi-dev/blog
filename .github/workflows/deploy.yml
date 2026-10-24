@@ -69,6 +69,11 @@ jobs:
       - run: pnpm test:e2e
       - run: pnpm test:e2e:parity
       - run: pnpm perf:check
+      - name: Diagnose failed test dependencies before cleanup
+        if: failure()
+        run: |
+          docker compose -f .devcontainer/compose.yaml ps --all
+          docker compose -f .devcontainer/compose.yaml logs --no-color --tail 200 postgres typesense minio
       - name: Stop isolated test dependencies
         if: always()
         run: docker compose -f .devcontainer/compose.yaml down
@@ -135,6 +140,11 @@ jobs:
           docker run --rm --network host --env DATABASE_URL --entrypoint /app/dist/blog "$IMAGE" --mode=migrate
           docker run --rm --network host --env R2_BUCKET --env S3_ENDPOINT --env S3_REGION --env S3_ACCESS_KEY_ID --env S3_SECRET_ACCESS_KEY --env S3_FORCE_PATH_STYLE --entrypoint /app/dist/blog "$IMAGE" --mode=init-local-media
           node scripts/test-container-publication.mjs "$IMAGE"
+      - name: Diagnose failed image dependencies before cleanup
+        if: failure()
+        run: |
+          docker compose -f .devcontainer/compose.yaml ps --all
+          docker compose -f .devcontainer/compose.yaml logs --no-color --tail 200 postgres typesense minio
       - name: Stop image test dependencies
         if: always()
         run: docker compose -f .devcontainer/compose.yaml down
