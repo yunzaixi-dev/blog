@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn, execFileSync } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -17,6 +17,17 @@ const article = path.join(content, 'blog', 'zh', 'container.md')
 const source = (body) => `---\ntitle: Container smoke\ndate: 2026-10-24\n---\n${body}\n`
 await writeFile(article, source('MountedFirstRelease'))
 await writeFile(path.join(media, 'static', 'smoke.txt'), 'IndependentMedia')
+// These public fixtures cross a numeric UID boundary on CI. Explicit chmod is
+// required: mkdir/writeFile modes alone are still restricted by the host umask.
+for (const name of [
+  content,
+  path.join(content, 'blog'),
+  path.join(content, 'blog', 'zh'),
+  media,
+  path.join(media, 'static'),
+])
+  await chmod(name, 0o755)
+for (const name of [article, path.join(media, 'static', 'smoke.txt')]) await chmod(name, 0o644)
 let container
 /** @type {import('node:child_process').ChildProcessByStdio<null, import('node:stream').Readable, import('node:stream').Readable> | undefined} */
 let logs
