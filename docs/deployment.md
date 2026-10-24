@@ -51,13 +51,13 @@ Git 历史默认仅使用运行目录中的本地 Git 信息；无 git 或无历
 
 完成后 `.cache/local-verification.json` 记录原始提交、未提交写集和本地镜像 ID；未提交候选不冒充干净提交。执行期间源码变动会失败。测试 checkout 保留原 Git 历史，但不复制仓库配置、凭据或 hooks；只有未提交候选使用临时提交供 importer 读取，该提交不冒充应用源码版本。失败时输出有界依赖日志并保留 `.cache/blog-verify-*-test-results`，最终只清理该次创建的容器、网络和卷，开发卷保持原样。该命令需要 Linux 宿主 Node、Docker Compose 和可用 Docker daemon，运行时镜像验证沿用 Linux host network；不在已进入的 app 容器内嵌套调用。应用 pre-push 要求已提交且工作区干净，并自动验证正在推送的 HEAD；纯内容 push 不触发应用构建。
 
-`.github/workflows/deploy.yml` 使用 Sengi Ubuntu 24.04 runner：双核仅构建生产 Pages 壳并检查重定向/CSP artifact，四核使用 Buildx 构建实际 Dockerfile，再执行无需外部依赖的轻量容器 smoke。云端不安装 Playwright 浏览器、不启动 PG/Typesense/S3、不跑 check、runtime、E2E、parity、perf 或完整 publication 集成。BuildKit 缓存继续使用 GitHub Actions cache。云端不验证本地报告的可信性；本地完整门禁由提交流程负责，不引入签名证明平台。
+`.github/workflows/deploy.yml` 仅运行一个 Sengi job：checkout 指定提交、检查 SHA 和 diff；手动发布确认时额外 HEAD 已存在的 registry manifest，核对 digest。云端没有依赖安装、浏览器、编译、镜像构建、整镜像 artifact 中转或上传，也不运行重测试。目标为提交触发至 job 完成 30 秒内，必须按实际运行时间验收；runner 排队和网络等待也计入，不以两分钟安全超时冒充三十秒达标。
 
-PR 和 dev 分支只验证、构建和 smoke，不发布镜像或部署。main 应用变更通过后，将已 smoke 的同一镜像推送到自有 Zot 仓库 `harbor.agentwego.com/zaixi/blog:<完整提交 SHA>`；`blog-image-<sha>` artifact 中的 `image-digest.txt` 和 job summary 给出 `harbor.agentwego.com/zaixi/blog@sha256:...`，由 GitOps 清单固定此 digest，Flux 负责集群协调。流水线不调用 kubectl、不修改 Flux、不依赖 latest 标签。
+PR、dev、main 的自动云端检查均不发布镜像或部署。main 合并后本地验证该干净 SHA，再运行 `pnpm release:local image`：使用调用者已有的、获批准的 Docker 登录，将 `.cache/local-verification.json` 中已测 image ID 标记并推送到 `harbor.agentwego.com/zaixi/blog:<完整 SHA>`，核对镜像 revision label，输出 `.cache/local-release.json` 的实际 digest；不重建。Flux 继续固定这个 digest，不依赖 latest。上传时间属于明确的本地准备阶段，不声称完整构建、上传、集群拉取也能在 30 秒内完成。
 
-同次验证还产出独立 `blog-pages-<sha>` 静态壳 artifact。后端经 Flux、数据库与 DNS 实际验收后，手动运行同一 SHA 并设置 `deploy_pages=true`，才使用原有 CI secrets 经 `scripts/pages_deploy.py` 上传 `zaixi-blog` main。默认 false，main push 不自动替换 Pages。上传权限与 GHCR publish job 分开。`deploy/**` 只更新固定 digest 不触发应用流水线，避免发布循环。
+本地验证保留 `.cache/verified-pages-<sha>`。后端经 Flux、数据库与 DNS 实际验收后运行 `pnpm release:local pages`，使用已验证的同 SHA 产物和原有 Cloudflare 环境凭据经 `scripts/pages_deploy.py` 上传 `zaixi-blog` main。脚本要求该 image ID 已发布、API 已有 committed revision；完整后端版本验收仍由操作者负责。main push 不自动替换 Pages。`deploy/**` 固定 digest 更新不触发应用流水线。
 
-首次上线可在 GitHub Actions 手动运行 `sengi-release`，`commit_sha` 必须提供完整 40 位提交 SHA。构建、smoke 和最终标签全部绑定此提交；完整测试先在本地完成。验证和镜像构建 job 只有 `contents: read`，checkout 不保留凭据。smoke 成功后以 `docker save | gzip` artifact 传递精确镜像，两端使用 `gzip -t` 检查传输完整性；独立 publish job 仅在 main push 或手动发布时运行，只下载、加载和推送镜像，不 checkout、不执行源码、不重新构建。`REGISTRY_USERNAME`／`REGISTRY_PASSWORD` 为博客专用 `blog-push`，仅允许 `zaixi/blog` 的 read/create/update；不再使用 GHCR、GitHub packages 写权限或网页公开包操作。迁移、API 和 importer 使用 namespace `blog` 的 `blog-registry` imagePullSecret，其 `blog-pull` 身份仅有该路径 read 权限，不复制其他应用凭据。
+GitHub Actions 手动运行 `sengi-release` 时提供完整 `commit_sha` 和已发布 `image_digest`，只校验 manifest，不推镜像或 Pages。云端 job 只有 `contents: read`；registry secrets 只用于认证 HEAD，不执行构建代码，不拉镜像层。registry 身份为博客专用 `blog-push`，迁移、API 和 importer 使用 namespace `blog` 的 `blog-registry` imagePullSecret，其 `blog-pull` 身份仅有该路径 read 权限，不复制其他应用凭据。
 
 只改 `content/**`、`public/static/images/**` 或 `public/forum/**` 不触发应用流水线；文章交付必须走独立内容同步。`pnpm test:container <image>` 可本地重跑实际镜像 smoke，覆盖 Go/私有 worker、静态壳、只读挂载内容修改/删除、媒体读取和 SIGTERM 退出，不把仓库文章打进镜像。
 

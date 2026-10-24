@@ -39,6 +39,7 @@
     "perf:check": "pnpm build && pnpm quality:html && pnpm size:budget",
     "verify": "pnpm check && pnpm test:runtime && pnpm test:e2e && pnpm perf:check",
     "verify:local": "node scripts/verify-local.mjs",
+    "release:local": "node scripts/release-local.mjs",
     "prepare": "husky",
     "test:go": "go test -race ./... && go vet ./... && go build -o /dev/null ./cmd/blog && test -z \"$(gofmt -l cmd internal)\"",
     "test:runtime": "node scripts/test-runtime.mjs",
