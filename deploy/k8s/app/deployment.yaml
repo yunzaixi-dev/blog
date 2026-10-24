@@ -101,6 +101,7 @@ spec:
           envFrom:
             - secretRef: {name: blog-importer}
           env:
+            - {name: HOME, value: /tmp}
             - {name: PGSSLROOTCERT, value: /etc/blog-db/ca.crt}
             - {name: SITE_URL, value: 'https://zaixi.dev'}
           securityContext:

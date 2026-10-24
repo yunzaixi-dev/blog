@@ -15,7 +15,7 @@ COPY internal ./internal
 RUN CGO_ENABLED=0 go build -trimpath -o /blog ./cmd/blog
 
 FROM registry.k8s.io/git-sync/git-sync@sha256:a20644562fba94773e594885cb001aadb5a3172175f13ac1215e5b2033c9200e AS git-sync
-FROM node:24-bookworm-slim
+FROM node:24-trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 WORKDIR /app
