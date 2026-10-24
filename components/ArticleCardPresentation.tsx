@@ -7,13 +7,13 @@ import { mutedText, skyLink } from '@/components/ui/styles'
 export type ArticleCardPresentationVariant = 'card' | 'article'
 
 export const articleCardPresentationClasses = {
-  content: 'px-4 py-4 sm:px-6 sm:py-6',
+  content: 'px-4 py-3 sm:px-6 sm:py-6',
   title:
-    'mb-2.5 text-[1.35rem] leading-[1.18] font-medium text-slate-900 sm:mb-3 sm:text-[1.65rem] sm:leading-tight dark:text-white/90',
-  git: `mb-3 space-y-2 text-[0.8125rem] leading-5 sm:mb-4 sm:text-sm sm:leading-6 ${mutedText}`,
+    'mb-2 text-[1.35rem] leading-[1.18] font-medium text-slate-900 sm:mb-3 sm:text-[1.65rem] sm:leading-tight dark:text-white/90',
+  git: `mb-2 space-y-2 text-[0.8125rem] leading-5 sm:mb-4 sm:text-sm sm:leading-6 ${mutedText}`,
   gitRow: 'flex flex-wrap items-start gap-x-3 gap-y-1.5 sm:gap-x-4 sm:gap-y-2',
   summary:
-    'mb-4 line-clamp-2 text-[0.95rem] leading-6 text-slate-600 sm:mb-5 sm:text-base sm:leading-7 dark:text-white/75',
+    'mb-2 line-clamp-2 text-[0.95rem] leading-6 text-slate-600 sm:mb-5 sm:text-base sm:leading-7 dark:text-white/75',
   footer: `flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.8125rem] sm:gap-x-4 sm:gap-y-3 sm:text-sm ${mutedText}`,
   footerMeta: 'flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3',
   readMoreSlot: 'ml-auto inline-flex items-center',

@@ -92,6 +92,44 @@ test('mobile home shows denser cards without shrinking real targets', async ({ p
   await expectNoHorizontalOverflow(page)
 })
 
+test('theme changes keep card backgrounds and text on the same palette without gray frames', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.addInitScript(() => localStorage.setItem('theme', 'light'))
+  await page.goto('/zh/')
+  await expect(page.locator('[data-post-shell]').first()).toBeVisible()
+  const button = page.getByRole('button', { name: '切换暗色模式' })
+  for (const theme of ['dark', 'light'] as const) {
+    const samples = await page.evaluate(async (nextTheme) => {
+      const card = document.querySelector<HTMLElement>('[data-post-shell]')!
+      const toggle = document.querySelector<HTMLButtonElement>('[aria-label="切换暗色模式"]')!
+      const changed = new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (document.documentElement.classList.contains(nextTheme)) {
+            observer.disconnect()
+            resolve()
+          }
+        })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      })
+      toggle.click()
+      await changed
+      const frames: string[] = []
+      for (let frame = 0; frame < 4; frame++) {
+        frames.push(getComputedStyle(card).backgroundColor)
+        await new Promise(requestAnimationFrame)
+      }
+      return frames
+    }, theme)
+    expect(samples).toEqual(
+      Array(4).fill(theme === 'dark' ? 'rgb(37, 45, 56)' : 'rgb(255, 255, 255)')
+    )
+    await expect(button).toBeVisible()
+  }
+})
+
 test('desktop sidebars read lighter than the main post card', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/zh/')

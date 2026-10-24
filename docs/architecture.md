@@ -54,6 +54,8 @@ Pages 静态壳由 React 在 API 返回后更新 title、lang、canonical、OG/T
 
 ## 文章卡片转场
 
+明暗主题切换使用现有 next-themes 的 `disableTransitionOnChange`：主题色原子切换，不让背景色和文字以不同节奏过渡成浅灰中间帧。卡片 hover 和文章 morph 动效仍保持原有行为。
+
 卡片、树快照 fixed、inert、aria-hidden，不复制 DOM 或正文。Header z50，覆盖层 z40。完整卡片共享 title/Git/summary/date/tag 的逐 child geometry；underlay 160ms 后打开 morph 380ms、验证返回 morph 340ms、返回 underlay 160ms 淡出。树 companion 同步 Phase B，树 solo 380ms；文章切换只用 180–220ms paint veil。reduced motion 取消大位移与等待。
 
 桌面阅读维持 `TOC(256) | gap(36) | surface | gap(36) | tree(256)`，shell 上限 1440；1024px 以下隐藏侧栏树，640px 以下卡片目标 top72/radius0，其他 top120/radius8。正文 rail、表格/代码/公式内部滚动与 44px 代码控件沿用现有样式。动画不接管路由或滚动；resize、缺几何、快速导航与不匹配目标立即退出快照。
