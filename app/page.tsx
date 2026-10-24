@@ -14,6 +14,7 @@ import type { ContentTreeNode } from '@/lib/content/contentTree'
 import { localeConfig, type Locale } from '@/lib/i18n'
 import type { TocHeading } from '@/lib/toc'
 import type { DocumentNode } from '../server/document'
+import { backendUrl, resolveBackendResources } from '@/lib/backend'
 
 type PageData = {
   locale: Locale
@@ -46,13 +47,16 @@ type PageData = {
 }
 export async function pageLoader({ request }: { request: Request }) {
   const path = new URL(request.url).pathname
-  const response = await fetch(`/api/page?${new URLSearchParams({ path: decodeURI(path) })}`, {
-    signal: request.signal,
-    cache: 'no-store',
-  })
+  const response = await fetch(
+    backendUrl(`/api/page?${new URLSearchParams({ path: decodeURI(path) })}`),
+    {
+      signal: request.signal,
+      cache: 'no-store',
+    }
+  )
   if (!response.ok && response.status !== 404)
     throw new Error(`Content request failed (${response.status})`)
-  return (await response.json()) as PageData
+  return resolveBackendResources((await response.json()) as PageData)
 }
 export default function Page() {
   const page = useLoaderData() as PageData

@@ -4,14 +4,21 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"zaixi.blog/server/internal/publication"
 	"zaixi.blog/server/internal/web"
 )
 
@@ -27,40 +34,87 @@ func run() error {
 	staticDir := flag.String("static", "out", "static application directory")
 	contentDir := flag.String("content", "content", "mounted content directory")
 	mediaDir := flag.String("media", "public", "mounted public directory containing static/")
+	checkoutRoot := flag.String("checkout-root", "", "import source checkout containing content/ and public/")
 	workerScript := flag.String("worker", "dist/worker/content-worker.mjs", "private Node stdio worker")
+	mode := flag.String("mode", "serve", "serve, migrate or import")
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	workerContext, cancelWorker := context.WithCancel(context.Background())
-	defer cancelWorker()
-	worker, err := web.StartWorker(workerContext, "node", *workerScript)
-	if err != nil {
-		return err
+	if *mode == "init-local-media" {
+		return publication.ImporterFromEnv(nil).InitializeLocalBucket(ctx)
 	}
-	defer func() {
-		cancelWorker()
-		if err := worker.Close(); err != nil && ctx.Err() == nil {
-			log.Print(err)
+	if *mode == "migrate" {
+		conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+		if err != nil {
+			return err
 		}
-	}()
-	store := &web.ContentStore{Directory: *contentDir, Build: worker.Build}
-	if _, err := store.Load(); err != nil {
+		defer conn.Close(ctx)
+		_, err = conn.Exec(ctx, publication.Schema)
 		return err
 	}
-	static, err := web.NewStatic(*staticDir, nil)
-	if err != nil {
-		return err
+	var static *web.Static
+	var err error
+	if *mode == "serve" {
+		static, err = web.NewStatic(*staticDir, nil)
+		if err != nil {
+			return err
+		}
+		defer static.Root.Close()
 	}
-	defer static.Root.Close()
-	mediaRoot, err := os.OpenRoot(*mediaDir)
-	if err != nil {
-		return err
+	var handler http.Handler
+	if os.Getenv("DATABASE_URL") != "" && *mode == "serve" {
+		handler = publication.FromEnv(static)
+	} else {
+		workerContext, cancelWorker := context.WithCancel(context.Background())
+		defer cancelWorker()
+		worker, err := web.StartWorker(workerContext, "node", *workerScript)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			cancelWorker()
+			if err := worker.Close(); err != nil && ctx.Err() == nil {
+				log.Print(err)
+			}
+		}()
+		store := &web.ContentStore{Directory: *contentDir, Build: worker.Build}
+		if *mode == "import" {
+			if *checkoutRoot == "" {
+				return fmt.Errorf("import requires --checkout-root")
+			}
+			pinned, err := filepath.EvalSymlinks(*checkoutRoot)
+			if err != nil {
+				return err
+			}
+			shaBytes, err := exec.Command("git", "-C", pinned, "rev-parse", "HEAD").Output()
+			if err != nil {
+				return err
+			}
+			sha := strings.TrimSpace(string(shaBytes))
+			revision, err := publication.ImporterFromEnv(worker.Build).Import(ctx, pinned, sha)
+			if err == nil {
+				log.Printf("Published revision %d source %s", revision, sha)
+			}
+			return err
+		}
+		if *mode != "serve" {
+			return fmt.Errorf("unknown mode")
+		}
+		if _, err := store.Load(); err != nil {
+			return err
+		}
+		mediaRoot, err := os.OpenRoot(*mediaDir)
+		if err != nil {
+			return err
+		}
+		defer mediaRoot.Close()
+		media := &web.Static{Root: mediaRoot}
+		legacy := &web.Handler{Content: store, Static: static, Media: media}
+		handler = legacy
+		static.Shell = legacy.Shell
+		static.PageExists = func(p string) bool { return true }
 	}
-	defer mediaRoot.Close()
-	media := &web.Static{Root: mediaRoot}
-	handler := &web.Handler{Content: store, Static: static, Media: media}
-	static.Shell = handler.Shell
-	static.PageExists = func(p string) bool { return true }
+	handler = web.CORS(handler, os.Getenv("CORS_ORIGINS"))
 	listener, err := net.Listen("tcp", *addr)
 	if err != nil {
 		return err

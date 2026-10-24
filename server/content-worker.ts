@@ -19,6 +19,7 @@ import { createArticleJsonLd, createPostCollectionJsonLd } from '../lib/structur
 import { getPostImageUrls } from '../lib/postImages'
 import { toForumMarkdown } from '../scripts/lib/post-export.mjs'
 import { clearPostGitHistoryCache } from '../content-pipeline/gitHistory'
+import { resolveBackendResources } from '../lib/backend'
 
 type Input = { files: { path: string; data: string }[] }
 const escape = (value: unknown) =>
@@ -249,8 +250,8 @@ export async function buildSnapshot(input: Input) {
     .join('')}</urlset>`
   return {
     version: 1,
-    pages,
-    documents,
+    pages: resolveBackendResources(pages),
+    documents: resolveBackendResources(documents),
     exports,
     feeds,
     sitemap,

@@ -1,24 +1,27 @@
 # 软件架构
 
-React 静态应用壳与运行时内容完全分离。文章更新无需前端构建、CI/CD 或进程重启。当前权威决策是 [ADR-0019](./decisions.md#adr-0019-静态-react-壳与运行时-go-内容-api)。旧 Next.js 静态正文与 Pagefind 决策已被取代。
+React 静态应用壳与运行时内容完全分离。文章更新无需前端构建、CI/CD 或进程重启。当前发布决策是 ADR-0021，保留 ADR-0019 的安全 parser 与 UI 边界；详见 [publication.md](./publication.md)。旧 Next.js 静态正文与 Pagefind 决策已被取代。
 
 ## 数据流
 
 ```text
-Vite -> out/index.html + hashed assets (no article content)
-Browser -> Go /api/page?path=... -> current page projection
-Mounted content -> byte comparison -> private Node stdio parser
-  -> immutable snapshot -> Go page/search/feed/sitemap/export handlers
-Mounted public -> Go safe static files / images / forum media
+Vite -> Cloudflare Pages zaixi.dev (static shell + hashed assets)
+Git -> independent git-sync importer -> private Node stdio parser
+  -> R2 immutable referenced media + Typesense revision collections
+  -> PostgreSQL transaction commits release / active_revision
+Browser -> api.zaixi.dev -> PG active page/feed/sitemap/export projection
+Browser search -> Go -> PG active collection -> Typesense
+Browser media -> blog-media.zaixi.dev immutable R2 object
 ```
 
-生产运行 Go HTTP 与一个受管 Node worker。Node 不监听端口；只接受 Go 从挂载内容目录读出的文件文本，返回 JSON。启动时建立首个快照，内容缺失、无效或 worker 启动失败会停止启动。HTTP 请求按完整字节比较增改删，不用 mtime/size 作为内容身份。新快照生成完成后整体发布；失败返回 503，不伪装为 404、不静默提供旧快照，修复后下一请求重试。
+生产 API 只读 PG 和 Typesense，不挂载 Git、不启动 Node。独立 importer 管理私有 Node stdio parser，固定 checkout SHA 并持 PG advisory lock；媒体及索引成功后以单事务提交完整 release。公开读取只认 active_revision，syncing/failed 仍服务最后 committed release；无 active、PG/Typesense 读取故障返回 503。旧无数据库文件模式仅保留本地 preview 与解析测试。
 
 ## 目录与边界
 
 - `app/main.tsx`：普通 React Router data router、稳定 AppShell、唯一 ScrollRestoration。
 - `app/page.tsx`：运行时 page loader 与页面投影消费；没有文章静态模块。
 - `internal/web/`：内容目录安全读取、快照锁与发布、搜索、HTTP、动态 head 与静态服务。
+- `internal/publication/`：PG schema、release 导入、R2 上传、Typesense 索引与生产 API 读取。
 - `server/content-worker.ts`：frontmatter schema、内容查询投影、正文 JSON 树、RSS/sitemap/export。
 - `server/document.ts`、`content-pipeline/`：安全 Markdown/MDX 解析及原 remark/rehype 插件。
 - `components/DocumentRenderer.tsx`：固定 registry 递归渲染 JSON 文档；浏览器不执行作者代码。
@@ -29,7 +32,7 @@ Mounted public -> Go safe static files / images / forum media
 
 `GET /api/page?path=/{locale}/.../` 返回当前请求同一快照的 kind、locale、metadata，以及对应页面的 cards/article/body/tree/terms。列表只携带卡片投影；文章只携带当前文章的白名单树、作者、TOC、精简上一篇/下一篇和 locale 内容树。未知页面返回 404 与本地化 notFound 投影，未知 API 返回 JSON 404，非法 path 返回 400。
 
-`GET /api/search?q=...&locale=zh|en&limit=1..50` 由 Go 对发布内容的内存索引搜索。默认 limit 10，q 必须非空且不超过 200 Unicode 字符；重复/未知参数、非法 locale/limit 返回 400。所有词都必须命中，标题权重高于摘要、摘要高于正文；同分按 URL 稳定排序。摘要是 Unicode 安全纯文本，不注入 HTML。草稿不进入页面、搜索、RSS、sitemap 或 export。
+`GET /api/search?q=...&locale=zh|en&limit=1..50` 从 PG 当前 release 选择 Typesense 双语 collection，不使用内存 fallback。默认 limit 10，q 必须非空且不超过 200 Unicode 字符；重复/未知参数、非法 locale/limit 返回 400。标题权重高于摘要、摘要高于正文；摘要纯文本，不注入 HTML。草稿不进入页面、搜索、RSS、sitemap 或 export。
 
 `/feed.xml`、`/{locale}/tags/{tag}/feed.xml`、历史 `/tags/{tag}/feed.xml`、`/sitemap.xml`、`/robots.txt`、`/export/{locale}/{slug}.md` 都来自同一发布快照。页面文档、API 和这些内容响应均 `no-store`。
 
@@ -41,7 +44,7 @@ Mounted public -> Go safe static files / images / forum media
 
 ## 文档与 SEO
 
-Go 注入当前请求的 title、lang、canonical、OG/Twitter、hreflang 与 JSON-LD，正文仍经 API 加载。无 JavaScript 时显示说明与 Markdown export 路径，不承诺无脚本正文。中文/英文空首页、term index 和 search 真实保留；没有英文文章时不伪造英文文章/term detail。未知资源返回真实 404，不被 SPA 壳吞掉。
+Pages 静态壳由 React 在 API 返回后更新 title、lang、canonical、OG/Twitter、hreflang 与 JSON-LD，不承诺社交抓取器看到动态 metadata。无 JavaScript 时显示说明与 Markdown export 路径，不承诺无脚本正文。Go 本地 preview 仍注入动态 head。Pages 未知页面壳可能 200，API 返回真实 404 并显示本地化页面；后端未知资源真实 404。
 
 ## 返回与滚动
 

@@ -79,7 +79,7 @@ export function absolutize(siteUrl, markdown) {
 export function toForumMarkdown(siteUrl, post) {
   const parts = [`# ${post.title}`]
   if (post.summary) parts.push(`> ${post.summary}`)
-  if (post.cover) parts.push(`![${post.title}](${siteUrl}${post.cover})`)
+  if (post.cover) parts.push(`![${post.title}](${new URL(post.cover, siteUrl).href})`)
   parts.push(absolutize(siteUrl, post.body.trim()))
   parts.push(`---\n\n原文：[${post.title}](${postUrl(siteUrl, post)})`)
   return parts.join('\n\n') + '\n'
@@ -171,7 +171,7 @@ function xArticleTransform(siteUrl, images) {
 export async function toXArticle(siteUrl, post) {
   /** @type {ExportImage[]} */
   const images = []
-  if (post.cover) images.push({ number: 0, url: `${siteUrl}${post.cover}`, alt: '封面' })
+  if (post.cover) images.push({ number: 0, url: new URL(post.cover, siteUrl).href, alt: '封面' })
   const html = String(
     await unified()
       .use(remarkParse)

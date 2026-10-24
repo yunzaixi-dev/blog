@@ -1,20 +1,46 @@
-name: release-artifact
+name: sengi-release
 on:
   push:
     branches: [main, dev]
-    paths-ignore: ["content/**", "public/static/images/**", "docs/**", "README.md", "LICENSE"]
+    paths-ignore: ["content/**", "public/static/images/**", "public/forum/**", "deploy/**", "docs/**", "README.md", "LICENSE"]
+  pull_request:
+    paths-ignore: ["content/**", "public/static/images/**", "public/forum/**", "deploy/**", "docs/**", "README.md", "LICENSE"]
   workflow_dispatch:
-permissions:
-  contents: read
+    inputs:
+      commit_sha:
+        description: Full commit SHA to verify, smoke-test and publish
+        required: true
+        type: string
+      deploy_pages:
+        description: Publish Pages only after this backend revision is live and verified
+        type: boolean
+        default: false
+permissions: {}
 concurrency:
-  group: release-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: sengi-release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify:
-    runs-on: ubuntu-24.04
+    runs-on: sengi-standard-2-ubuntu-2404
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.commit_sha || github.sha }}
+      - name: Bind all checks and the image to the same commit
+        id: source
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha || github.sha }}
+        run: |
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
+          echo "sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version-file: .node-version, cache: pnpm }
@@ -24,13 +50,159 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm check
       - run: pnpm build
+      - name: Start isolated PostgreSQL, Typesense and S3
+        run: docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
+      - name: Exercise the real publication pipeline
+        env:
+          DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
+          TYPESENSE_URL: http://127.0.0.1:45103
+          TYPESENSE_API_KEY: blog-local-typesense-only
+          S3_ENDPOINT: http://127.0.0.1:45104
+          S3_REGION: us-east-1
+          R2_BUCKET: blog-test-media
+          S3_ACCESS_KEY_ID: blog-local-only
+          S3_SECRET_ACCESS_KEY: blog-local-secret-only
+          S3_FORCE_PATH_STYLE: 'true'
+          MEDIA_BASE_URL: http://127.0.0.1:45104/blog-test-media
+        run: pnpm test:integration && pnpm test:split-release
       - run: pnpm test:runtime
       - run: pnpm test:e2e
       - run: pnpm test:e2e:parity
-      - run: pnpm quality:html && pnpm size:budget
-      - name: Package runtime and private worker dependencies
-        run: tar -czf blog-runtime.tar.gz dist out node_modules package.json
+      - run: pnpm perf:check
+      - name: Stop isolated test dependencies
+        if: always()
+        run: docker compose -f .devcontainer/compose.yaml down
+      - name: Build the Pages shell against the production API
+        env:
+          API_BASE_URL: https://api.zaixi.dev
+          MEDIA_BASE_URL: https://blog-media.zaixi.dev
+          SITE_URL: https://zaixi.dev
+        run: |
+          pnpm exec vite build
+          node scripts/prepare-pages.mjs
+          node scripts/test-pages-artifact.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: blog-runtime-${{ github.sha }}
-          path: blog-runtime.tar.gz
+          name: blog-pages-${{ steps.source.outputs.sha }}
+          path: out
+          include-hidden-files: true
+          if-no-files-found: error
+  image:
+    needs: verify
+    runs-on: sengi-standard-4-ubuntu-2404
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      IMAGE: ghcr.io/yunzaixi-dev/blog:${{ needs.verify.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .node-version }
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the actual runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.revision=${{ needs.verify.outputs.sha }}
+            org.opencontainers.image.source=https://github.com/yunzaixi-dev/blog
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke-test the built image with independent mounted content
+        run: node scripts/test-container.mjs "$IMAGE"
+      - name: Start image publication dependencies
+        run: docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
+      - name: Verify the production image and real Git-worktree hook
+        env:
+          DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
+          TYPESENSE_URL: http://127.0.0.1:45103
+          TYPESENSE_API_KEY: blog-local-typesense-only
+          S3_ENDPOINT: http://127.0.0.1:45104
+          S3_REGION: us-east-1
+          R2_BUCKET: blog-test-media
+          S3_ACCESS_KEY_ID: blog-local-only
+          S3_SECRET_ACCESS_KEY: blog-local-secret-only
+          S3_FORCE_PATH_STYLE: 'true'
+          MEDIA_BASE_URL: http://127.0.0.1:45104/blog-test-media
+        run: |
+          docker run --rm --network host --env DATABASE_URL --entrypoint /app/dist/blog "$IMAGE" --mode=migrate
+          docker run --rm --network host --env R2_BUCKET --env S3_ENDPOINT --env S3_REGION --env S3_ACCESS_KEY_ID --env S3_SECRET_ACCESS_KEY --env S3_FORCE_PATH_STYLE --entrypoint /app/dist/blog "$IMAGE" --mode=init-local-media
+          node scripts/test-container-publication.mjs "$IMAGE"
+      - name: Stop image test dependencies
+        if: always()
+        run: docker compose -f .devcontainer/compose.yaml down
+      - name: Save the exact smoke-tested image for publication
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: docker save --output blog-image.tar "$IMAGE"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        with:
+          name: blog-container-${{ needs.verify.outputs.sha }}
+          path: blog-image.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+  publish:
+    needs: [verify, image]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: sengi-standard-2-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      packages: write
+    env:
+      IMAGE: ghcr.io/yunzaixi-dev/blog:${{ needs.verify.outputs.sha }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: blog-container-${{ needs.verify.outputs.sha }}
+      - name: Load the smoke-tested image without executing source or rebuilding
+        run: docker load --input blog-image.tar
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the exact smoke-tested image and record its digest
+        env:
+          SOURCE_SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          docker push "$IMAGE"
+          PIN=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')
+          [[ "$PIN" =~ ^ghcr.io/yunzaixi-dev/blog@sha256:[0-9a-f]{64}$ ]]
+          printf '%s\n' "$PIN" > image-digest.txt
+          printf 'Source: `%s`\n\nFlux image pin: `%s`\n' "$SOURCE_SHA" "$PIN" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog-image-${{ needs.verify.outputs.sha }}
+          path: image-digest.txt
+          if-no-files-found: error
+  pages:
+    needs: [verify, image]
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_pages
+    runs-on: sengi-standard-2-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: blog-pages-${{ needs.verify.outputs.sha }}
+          path: out
+      - name: Upload the verified Pages shell to the existing project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SOURCE_SHA: ${{ needs.verify.outputs.sha }}
+        run: python3 scripts/pages_deploy.py out zaixi-blog main

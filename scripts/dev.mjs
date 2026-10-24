@@ -8,6 +8,7 @@ if (apiPort !== port + 1) throw new Error('API_PORT must follow DEV_PORT')
 process.env.DEV_PORT = String(port)
 process.env.API_PORT = String(apiPort)
 const staticDirectory = '.cache/dev-out'
+const host = process.env.DEV_HOST || '127.0.0.1'
 
 await mkdir('dist', { recursive: true })
 await run('pnpm', ['exec', 'vite', 'build', '--outDir', staticDirectory])
@@ -18,7 +19,7 @@ await supervise([
     command: './dist/blog',
     args: [
       '--addr',
-      `127.0.0.1:${apiPort}`,
+      `${host}:${apiPort}`,
       '--static',
       staticDirectory,
       '--content',
@@ -29,6 +30,6 @@ await supervise([
   },
   {
     command: 'pnpm',
-    args: ['exec', 'vite', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
+    args: ['exec', 'vite', '--host', host, '--port', String(port), '--strictPort'],
   },
 ])

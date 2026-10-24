@@ -57,10 +57,9 @@ export default defineConfig({
     },
   ],
   define: Object.fromEntries(
-    ['SITE_URL', 'UMAMI_ID', 'GIT_COMMIT_HASH', 'GIT_COMMIT_FULL_HASH'].map((key) => [
-      `process.env.${key}`,
-      JSON.stringify(process.env[key] || ''),
-    ])
+    ['SITE_URL', 'API_BASE_URL', 'UMAMI_ID', 'GIT_COMMIT_HASH', 'GIT_COMMIT_FULL_HASH'].map(
+      (key) => [`process.env.${key}`, JSON.stringify(process.env[key] || '')]
+    )
   ),
   build: {
     outDir: 'out',

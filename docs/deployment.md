@@ -1,5 +1,9 @@
 # 部署
 
+## R2 媒体资源
+
+生产专用 bucket 为 `zaixi-blog-media`（APAC、Standard），公开只读域名为 `https://blog-media.zaixi.dev`，配置项 `MEDIA_BASE_URL` 使用该地址。r2.dev 未启用，原 img 域名不变。上传由导入器使用 account S3 endpoint 与 bucket 作用域凭据完成，凭据只通过生产 Secret 注入，不进入浏览器、Git 或本地测试环境。对象 key 与内容索引的发布顺序按导入器数据合同执行；配置公开域名不代表图片迁移已完成。
+
 应用和内容分别交付。应用由 Go HTTP 进程、私有 Node stdio worker 和 Vite 静态壳组成；运行时必须有 Node.js 24+，不是单二进制部署，也不再适用于 Pages-only 静态托管。
 
 ## 本机运行交付包
@@ -23,11 +27,35 @@ docker run --rm -p 127.0.0.1:45101:45101 \
 
 `/content` 放 `blog/{locale}/...md` 和 `authors/...mdx`；`/media` 放 `static/`、`forum/` 及 `_redirects`。容器用户需有读取权限。内容不打入镜像，应用替换不会覆盖文章；写作同步工具在宿主目录原子 rename 文件即可，单篇内容校验失败不允许旧快照静默继续服务。跨多文件的一次编辑需由发布者保证目录切换原子性。
 
+### Flux 与独立导入器
+
+`deploy/k8s/storage` 单独管理 blog namespace、Retain StorageClass/PV/PVC，资源关闭 Flux prune；`deploy/k8s/app` 只管理应用。infra 的 `blog-storage` 协调 storage，`blog` 通过 dependsOn 等待 storage，再以 `blog-release` ConfigMap 的 `BLOG_IMAGE` 完整 digest 替换应用镜像。该值必须来自成功 Sengi 发布记录。
+
+生产 importer 独占 `/data` PVC，不使用 Kubernetes subPath。git-sync v4.8.0 每 30 秒从 main 同步，原子切换 current，保留旧 worktree 10 分钟，再通过 exechook 执行同镜像中的 `--mode=import`。导入器固定 checkout SHA，解析公开内容、上传 R2、建立 Typesense collection，最后事务切换 PostgreSQL active_revision。API 不挂载内容 PVC、不启动 parser，只读 PG 与当前 Typesense 索引。完整协议见 [publication.md](./publication.md)。
+
+`--checkout-root` 仅导入器使用；生产 `DATABASE_URL` 启用 PG API 模式，旧无数据库 `--content` / `--media` 本地 preview 仍可用。新增/修改/删除经独立导入即可发布，不执行文章 CI、不重建镜像、不 rollout API Pod。失败不切 revision，publication phase/error_code 显式记录，API 继续读取最后成功提交的 active release；无 active、PG 读取或 Typesense 查询失败才返回 503。
+
+当前 storage 清单固定 `prod-sg-db-03:/var/lib/kubelet/blog-content`，5 GiB、ReadWriteOnce、Recreate 单副本。数据由 node 本地卷持久化，Pod 重建会复用；节点不可用时不自动跨节点搬迁。Git 仍是内容权威，恢复时由运维明确恢复该目录或另建 Retain PV。删除应用协调不应删除 storage；销毁 PVC/PV/namespace 需另行批准。
+
+公网前端 `zaixi.dev` 保留现有 `zaixi-blog` Cloudflare Pages 项目，不迁移 apex。后端 `api.zaixi.dev` 复用 zaixi-edge 的 `edge-ha` Gateway、Gateway 级 CrowdSec AppSec 和远程管理 cloudflared。edge blog HTTPRoute 只匹配 API 子域；ReferenceGrant 和 NetworkPolicy 仅允许 Envoy 到 blog 的 45101 端口。需推进 infra 中固定的 zaixi-edge source commit；只推 edge main 不会更新生产。API 子域 DNS/tunnel 配置由获授权运维处理，不修改遗留 ConfigMap 冒充切流。
+
+Pages 构建设置 `API_BASE_URL=https://api.zaixi.dev`，page loader/search 统一调用该基址；开发默认空值走 45100→45101 同源代理。Go `CORS_ORIGINS` 使用精确白名单：主域、`dev.zaixi.dev` 和项目正式 `zaixi-blog.pages.dev`；任意 hash preview 不自动受信任，需运维显式追加该完整 origin 并重启应用配置。无 credentials、无通配符；OPTIONS 只允许 GET/HEAD，拒绝自定义请求头，错误响应同样保留 CORS/Vary。
+
+API 中媒体字段由导入器改写为 R2 不可变对象 URL；export/feed 等服务资源指向后端，文章页面链接仍指向 Pages，不改外部 URL 或正文文字。新媒体随独立导入发布，不依赖 Pages build；Pages 旧 `/static/images/*`、forum、export/feed/sitemap/robots 路径重定向后端，再由当前 media manifest 定位 R2。纯静态 Pages 用 `/* /index.html 200` 支持客户端动态路由，因此未知页面 HTTP shell 可能为 200，真实 404 由 API 返回并渲染，不能声称 Pages 提供动态 HTTP 404 或服务端 OG。Go 本地 preview 继续提供动态 head 与真实状态码。
+
 Git 历史默认仅使用运行目录中的本地 Git 信息；无 git 或无历史时直接使用文章 date/lastmod 和稳定源文件链接，不等待网络。需要完整历史时保留只读仓库与提交历史。可显式设置 `GIT_HISTORY_REMOTE=1` 启用 GitHub 历史富化；该可选模式可能等待网络，不建议在离线服务开启。运行时未提交修改可以立即显示，Git 更新时间仍表示已提交历史。正文解析错误仍返回 503，不属于元信息缺失。
 
-## 发布 artifact
+## Sengi 镜像流水线
 
-`.github/workflows/deploy.yml` 在应用变更时执行完整门禁后上传 `blog-runtime-<sha>`，内含 Go、worker、应用壳与 Node 依赖。只改 `content/**` 或文章图片不触发该工作流。CI 不持有 Pages 发布令牌、不执行远端部署。下载 Linux artifact 后解包到新的应用目录，再用现有服务管理器切换应用版本；挂载的内容目录保持独立。
+`.github/workflows/deploy.yml` 使用 Sengi Ubuntu 24.04 runner：双核运行 `pnpm check`、生产构建、runtime、e2e、parity 和 perf 门禁，四核使用 Buildx 构建实际 Dockerfile，再执行容器 smoke。Node 24 和 Go 1.26 与本地交付保持一致，BuildKit 缓存使用 GitHub Actions cache。
+
+PR 和 dev 分支只验证、构建和 smoke，不发布镜像或部署。main 应用变更通过后，将已 smoke 的同一镜像推送到 `ghcr.io/yunzaixi-dev/blog:<完整提交 SHA>`；`blog-image-<sha>` artifact 中的 `image-digest.txt` 和 job summary 给出 `ghcr.io/yunzaixi-dev/blog@sha256:...`，由 GitOps 清单固定此 digest，Flux 负责集群协调。流水线不调用 kubectl、不修改 Flux、不依赖 latest 标签。
+
+同次验证还产出独立 `blog-pages-<sha>` 静态壳 artifact。后端经 Flux、数据库与 DNS 实际验收后，手动运行同一 SHA 并设置 `deploy_pages=true`，才使用原有 CI secrets 经 `scripts/pages_deploy.py` 上传 `zaixi-blog` main。默认 false，main push 不自动替换 Pages。上传权限与 GHCR publish job 分开。`deploy/**` 只更新固定 digest 不触发应用流水线，避免发布循环。
+
+首次上线可在 GitHub Actions 手动运行 `sengi-release`，`commit_sha` 必须提供完整 40 位提交 SHA。门禁、镜像构建、smoke 和最终标签全部绑定此提交；手动发布同样不能跳过验证。验证和镜像构建 job 只有 `contents: read`，checkout 不保留凭据。smoke 成功后以 `docker save` artifact 传递精确镜像；独立 publish job 仅在 main push 或手动发布时运行，独占 `packages: write`，只下载、加载和推送镜像，不 checkout、不执行源码、不重新构建。它使用 GitHub job token 登录 GHCR，无需读取本地 CLI 凭据。公开源码不自动等于公开 GHCR package；集群拉取前需确认包可匿名读取，或使用已批准的 imagePullSecret。
+
+只改 `content/**`、`public/static/images/**` 或 `public/forum/**` 不触发应用流水线；文章交付必须走独立内容同步。`pnpm test:container <image>` 可本地重跑实际镜像 smoke，覆盖 Go/私有 worker、静态壳、只读挂载内容修改/删除、媒体读取和 SIGTERM 退出，不把仓库文章打进镜像。
 
 ## 代理、缓存与安全
 

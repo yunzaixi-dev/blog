@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog
+  namespace: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: blog}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: blog}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: api
+          image: ${BLOG_IMAGE}
+          command: [/app/dist/blog]
+          args: [--addr=0.0.0.0:45101]
+          envFrom:
+            - secretRef: {name: blog-api}
+          env:
+            - {name: PGSSLROOTCERT, value: /etc/blog-db/ca.crt}
+            - {name: CORS_ORIGINS, value: 'https://zaixi.dev,https://dev.zaixi.dev,https://zaixi-blog.pages.dev'}
+          ports:
+            - {name: http, containerPort: 45101}
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: '2', memory: 512Mi}
+          volumeMounts:
+            - {name: db-ca, mountPath: /etc/blog-db, readOnly: true}
+          readinessProbe:
+            httpGet: {path: '/api/page?path=/zh/', port: http}
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 30
+      volumes:
+        - name: db-ca
+          configMap:
+            name: blog-db-ca
+            items:
+              - {key: ca.crt, path: ca.crt}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-importer
+  namespace: blog
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app.kubernetes.io/name: blog-importer}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: blog-importer}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: {type: RuntimeDefault}
+      initContainers:
+        - name: content-permissions
+          image: registry.k8s.io/git-sync/git-sync@sha256:a20644562fba94773e594885cb001aadb5a3172175f13ac1215e5b2033c9200e
+          command: [/bin/sh, -ec]
+          args: ['mkdir -p /data/git; chown 1000:1000 /data/git']
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL], add: [CHOWN, DAC_OVERRIDE]}
+          volumeMounts:
+            - {name: content, mountPath: /data}
+      containers:
+        - name: sync-import
+          image: ${BLOG_IMAGE}
+          command: [/usr/local/bin/git-sync]
+          args:
+            - --repo=https://github.com/yunzaixi-dev/blog.git
+            - --ref=main
+            - --root=/data/git
+            - --link=current
+            - --period=30s
+            - --submodules=off
+            - --stale-worktree-timeout=10m
+            - --max-failures=-1
+            - --exechook-command=/app/scripts/import-current.sh
+            - --exechook-timeout=5m
+            - --http-bind=:2020
+          envFrom:
+            - secretRef: {name: blog-importer}
+          env:
+            - {name: PGSSLROOTCERT, value: /etc/blog-db/ca.crt}
+            - {name: SITE_URL, value: 'https://zaixi.dev'}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: '2', memory: 1Gi}
+          volumeMounts:
+            - {name: content, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+            - {name: db-ca, mountPath: /etc/blog-db, readOnly: true}
+      volumes:
+        - name: content
+          persistentVolumeClaim: {claimName: blog-content}
+        - name: tmp
+          emptyDir: {}
+        - name: db-ca
+          configMap:
+            name: blog-db-ca
+            items:
+              - {key: ca.crt, path: ca.crt}

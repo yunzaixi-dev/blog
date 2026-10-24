@@ -2,6 +2,7 @@
 import { AnchorHTMLAttributes } from 'react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
+import { backendResourceUrl } from '@/lib/backend'
 
 function isStaticAssetPath(href: string) {
   return (
@@ -24,6 +25,9 @@ const CustomLink = ({
   const isInternalLink = href && href.startsWith('/')
   const isAnchorLink = href && href.startsWith('#')
   const linkClassName = cn('break-words', className)
+
+  const resource = backendResourceUrl(href)
+  if (resource !== href) return <a className={linkClassName} href={resource} {...rest} />
 
   if (isInternalLink && !href.startsWith('//') && !rest.download && !isStaticAssetPath(href)) {
     return <Link className={linkClassName} to={href} replace={replace} {...rest} />

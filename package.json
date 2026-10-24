@@ -12,7 +12,7 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:parity": "cross-env PLAYWRIGHT_DEV_PREVIEW_PARITY=1 PLAYWRIGHT_PORT=45102 playwright test tests/e2e/dev-preview-parity.spec.ts --project=chromium",
+    "test:e2e:parity": "cross-env PLAYWRIGHT_DEV_PREVIEW_PARITY=1 PLAYWRIGHT_PORT=45110 playwright test tests/e2e/dev-preview-parity.spec.ts --project=chromium",
     "lint": "pnpm lint:check",
     "lint:check": "eslint app components content-pipeline data lib layouts server scripts tests *.ts *.mjs *.js --max-warnings=0",
     "lint:fix": "pnpm lint:check --fix",
@@ -40,7 +40,15 @@
     "verify": "pnpm check && pnpm test:runtime && pnpm test:e2e && pnpm perf:check",
     "prepare": "husky",
     "test:go": "go test -race ./... && go vet ./... && go build -o /dev/null ./cmd/blog && test -z \"$(gofmt -l cmd internal)\"",
-    "test:runtime": "node scripts/test-runtime.mjs"
+    "test:runtime": "node scripts/test-runtime.mjs",
+    "test:container": "node scripts/test-container.mjs",
+    "test:container:publication": "node scripts/test-container-publication.mjs",
+    "test:pages": "node scripts/test-pages.mjs",
+    "test:pages:artifact": "node scripts/test-pages-artifact.mjs",
+    "test:dev:media": "node scripts/test-dev-media.mjs",
+    "test:split-release": "node scripts/test-split-release.mjs",
+    "test:integration": "cross-env BLOG_INTEGRATION=1 go test -race -count=1 -v ./internal/publication",
+    "dev:full": "node scripts/dev-initialize.mjs && pnpm dev"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.1",

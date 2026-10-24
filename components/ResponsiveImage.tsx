@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { backendResourceUrl } from '@/lib/backend'
 
 type ResponsiveImageProps = {
   src: string
@@ -22,7 +23,7 @@ export default function ResponsiveImage({
 }: ResponsiveImageProps) {
   return (
     <img
-      src={src}
+      src={backendResourceUrl(src)}
       alt={alt}
       sizes={sizes}
       width={width}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { backendUrl, resolveBackendResources } from '@/lib/backend'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Link from '@/components/Link'
 import Icon from '@/components/Icon'
@@ -56,11 +57,15 @@ export default function SearchPageClient({ locale }: { locale: Locale }) {
 
       try {
         const response = await fetch(
-          `/api/search?${new URLSearchParams({ q: trimmedQuery, locale, limit: String(RESULT_LIMIT) })}`,
+          backendUrl(
+            `/api/search?${new URLSearchParams({ q: trimmedQuery, locale, limit: String(RESULT_LIMIT) })}`
+          ),
           { signal: controller.signal }
         )
         if (!response.ok) throw new Error(`Search request failed: ${response.status}`)
-        const { results } = (await response.json()) as { results: SearchResult[] }
+        const { results } = resolveBackendResources(
+          (await response.json()) as { results: SearchResult[] }
+        )
         if (!Array.isArray(results)) throw new Error('Invalid search response')
 
         if (activeSearchRef.current !== searchId) return

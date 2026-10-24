@@ -16,6 +16,15 @@ type Handler struct {
 	Content *ContentStore
 	Static  *Static
 	Media   *Static
+	Load    func() (*Snapshot, error)
+	Search  func(http.ResponseWriter, *http.Request)
+}
+
+func (h *Handler) load() (*Snapshot, error) {
+	if h.Load != nil {
+		return h.Load()
+	}
+	return h.Content.Load()
 }
 
 func normalizeRoute(value string) string {
@@ -45,12 +54,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/api/search" || r.URL.Path == "/api/page" {
-		snapshot, err := h.Content.Load()
+		snapshot, err := h.load()
 		if err != nil {
 			h.unavailable(w, err)
 			return
 		}
 		if r.URL.Path == "/api/search" {
+			if h.Search != nil {
+				h.Search(w, r)
+				return
+			}
 			Search(w, r, snapshot.Documents)
 			return
 		}
@@ -83,7 +96,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/feed.xml" || r.URL.Path == "/sitemap.xml" || r.URL.Path == "/robots.txt" || strings.HasPrefix(r.URL.Path, "/export/") || strings.HasSuffix(r.URL.Path, "/feed.xml") {
-		snapshot, err := h.Content.Load()
+		snapshot, err := h.load()
 		if err != nil {
 			h.unavailable(w, err)
 			return
@@ -124,7 +137,7 @@ var htmlLang = regexp.MustCompile(`<html\s+lang="[^"]*"`)
 var titleTag = regexp.MustCompile(`<title>[^<]*</title>`)
 
 func (h *Handler) Shell(w http.ResponseWriter, r *http.Request) {
-	snapshot, err := h.Content.Load()
+	snapshot, err := h.load()
 	if err != nil {
 		h.unavailable(w, err)
 		return

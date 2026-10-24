@@ -294,3 +294,33 @@
 frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言引擎分派；BOM/CRLF 先规范化，拒绝语言声明。公开查询无论 NODE_ENV 都排除草稿。Git 历史默认只读本地，缺失时使用 frontmatter 时间与源文件链接；远端富化必须显式设置 GIT_HISTORY_REMOTE=1，不再让默认冷启动与文章更新依赖网络。
 
 用户授权 WebP 有损压缩与适度缩尺寸以满足原 2 MB 图片门禁。图表维持分辨率以保留标签；插画/照片最多 1400px。转换原图保存在 Git 历史，不双份发布；旧 PNG/JPEG URL 以 \_redirects 中的明确 301 规则兼容，新 .webp URL 的正确 MIME、Range/HEAD 和安全根目录检查继续生效。SITE_URL 的应用端为构建配置，worker 端为进程启动配置，部署应保持一致。
+
+## ADR-0020 Sengi 构建镜像，Flux 管理应用发布
+
+日期：2026-10-24
+
+**背景**：ADR-0019 的本地运行时 artifact 尚未提供集群发布入口。用户指定沿用 Sengi CI/CD 与现有 Flux，文章发布不得触发镜像构建或 Pod rollout。
+
+**决策**：应用流水线在 Sengi 双核 runner 上运行完整门禁、四核 runner 上用官方 Docker Buildx action 构建并 smoke 实际容器。PR 不发布；main 或显式指定完整提交 SHA 的手动运行在成功后推送 GHCR，输出不可变 digest 供 Flux 清单固定。验证和构建 job 只读且不保留 checkout 凭据；GitHub job token 的 packages 写权限仅授予独立 publish job，后者从 artifact 加载已 smoke 的镜像，不 checkout、执行源码或重新构建。CI 不持有 Kubernetes 凭据、不直接部署。内容与文章媒体保持独立挂载，内容专用变更不启动应用流水线。
+
+**后果**：回滚依据是提交 SHA 与镜像 digest，不是可变 latest；镜像必须先完成真实容器 smoke 才能推送。内容同步和公网流量切换仍分别由内容发布链及现有边缘入口负责，镜像发布成功不等于公网发布完成。
+
+### ADR-0020 修订：git-sync 原子 checkout 与独立持久内容
+
+采用 kubernetes/git-sync v4.8.0（planner 实查 2,741 GitHub stars；官方合同见 https://github.com/kubernetes/git-sync/tree/v4.8.0），固定 OCI digest。原生 Kubernetes sidecar 首次同步成功后才启动 blog；30 秒同步 main，submodules off，旧 worktree 保留 10 分钟。共享 Retain PVC，内容专用 push 不经过应用 CI 和 rollout。
+
+初期的 API 每请求文件快照方案已由下述 PostgreSQL 发布合同替代；`--checkout-root` 仅供 importer 固定来源。storage 由 prune=false、deletionPolicy=Orphan 的独立 Flux 协调持有，app dependsOn storage。入口复用现有 Envoy/CrowdSec/cloudflared，Git 管理 API 子域 HTTPRoute、ReferenceGrant 与 NetworkPolicy；远程 tunnel 与 DNS 操作不由 CI 执行。
+
+### ADR-0020 修订：Pages 前端与 API 子域
+
+按用户最终部署边界，zaixi.dev 保留 Cloudflare Pages 静态壳，api.zaixi.dev 承载 Go/Node 内容服务。Sengi 分别上传现有 Pages 项目与 GHCR 镜像，Flux 只协调集群后端。前端 API_BASE_URL 统一 page/search，Go 精确 CORS 白名单不开放浏览器凭据；动态媒体字段转为后端 URL，页面链接保持 Pages。Pages 的客户端路由 fallback 返回壳 200，404 由 API 表达；静态壳不再承诺服务端动态 SEO。发文仍经 Git 独立同步，不触发 CI/build/rollout。
+
+## ADR-0021 PostgreSQL 发布权威、Typesense 搜索与 R2 媒体
+
+日期：2026-10-24
+
+**决策**：按用户要求使用现有 CNPG app-db 的独立 blog 库。不可变 releases 存储公开 JSON snapshot、collection 映射与 media manifest，publication.active_revision 是唯一公开切版点。独立 importer 固定 Git SHA、持 session advisory lock，安全 Node stdio parser 生成公开投影，R2 上传不可变 release 对象，Typesense 完成双语索引并核对逐行结果及 count，最终单个 PG 事务发布。API reader 不启动 parser，不扫描 Git、不内存搜索。同步和导入失败继续服务最后 committed active；没有 active、PG/Typesense 读取失败才 503。R2 使用已建立公开域名，不新增私有代理或 Pages Functions。
+
+依赖证据由 planner 本次核实：pgx 14,352 stars、AWS SDK Go 3,670 stars、Typesense 27,035 stars；implementer 经 GitHub API 核实 MinIO 61,301 stars，均超过 1,000 门槛。本地使用 MinIO 的 S3 兼容隔离环境，独立测试凭据与数据卷，不连生产 R2。部署和发布协议见 [publication.md](./publication.md)。
+
+**后果**：导入失败不发布半版，旧索引保留避免并发清理；草稿和删除经新 release 从正文/索引消失，已公开 R2 对象不承诺密码学撤回。应用发布采用镜像与 Pages 两阶段显式门控，后端真实就绪后才允许 Pages 手动发布同 SHA。

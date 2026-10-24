@@ -38,6 +38,7 @@ type Page struct {
 	Metadata Metadata `json:"metadata"`
 }
 type Snapshot struct {
+	Redirects string                     `json:"redirects,omitempty"`
 	Version   int                        `json:"version"`
 	Pages     map[string]json.RawMessage `json:"pages"`
 	Documents []SearchDocument           `json:"documents"`
@@ -150,16 +151,20 @@ type ContentStore struct {
 // Load compares file bytes, not timestamps. The mutex publishes the complete
 // immutable snapshot in one step; invalid changes fail the request, not stale-serve.
 func (s *ContentStore) Load() (*Snapshot, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	files := []ContentFile{}
-	totalBytes := 0
 	root, err := os.OpenRoot(s.Directory)
 	if err != nil {
 		return nil, err
 	}
 	defer root.Close()
-	err = fs.WalkDir(root.FS(), ".", func(file string, entry fs.DirEntry, err error) error {
+	return s.LoadRoot(root)
+}
+
+func (s *ContentStore) LoadRoot(root *os.Root) (*Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	files := []ContentFile{}
+	totalBytes := 0
+	err := fs.WalkDir(root.FS(), ".", func(file string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

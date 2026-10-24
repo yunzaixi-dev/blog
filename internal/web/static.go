@@ -23,12 +23,79 @@ type Static struct {
 	Shell      func(http.ResponseWriter, *http.Request)
 }
 
+func (s *Static) WithRedirects(text string) (*Static, error) {
+	copy := *s
+	copy.redirects = nil
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 || strings.HasPrefix(fields[0], "#") {
+			continue
+		}
+		if len(fields) < 2 || len(fields) > 3 {
+			return nil, fmt.Errorf("invalid redirect")
+		}
+		status := 302
+		if len(fields) == 3 {
+			if _, err := fmt.Sscan(fields[2], &status); err != nil {
+				return nil, err
+			}
+		}
+		if status != 301 && status != 302 && status != 307 && status != 308 {
+			return nil, fmt.Errorf("invalid redirect status")
+		}
+		if !strings.HasPrefix(fields[1], "/") || strings.HasPrefix(fields[1], "//") {
+			return nil, fmt.Errorf("invalid redirect target")
+		}
+		copy.redirects = append(copy.redirects, redirect{fields[0], fields[1], status})
+	}
+	return &copy, scanner.Err()
+}
+
+func (s *Static) Redirect(w http.ResponseWriter, r *http.Request) bool {
+	for _, rule := range s.redirects {
+		match := rule.source == r.URL.Path
+		splat := ""
+		if before, after, ok := strings.Cut(rule.source, "*"); ok && strings.HasPrefix(r.URL.Path, before) && strings.HasSuffix(r.URL.Path, after) && len(r.URL.Path) >= len(before)+len(after) {
+			match = true
+			splat = r.URL.Path[len(before) : len(r.URL.Path)-len(after)]
+		}
+		if match {
+			segments := strings.Split(splat, "/")
+			for index := range segments {
+				segments[index] = url.PathEscape(segments[index])
+			}
+			target := strings.ReplaceAll(rule.target, ":splat", strings.Join(segments, "/"))
+			if r.URL.RawQuery != "" {
+				separator := "?"
+				if strings.Contains(target, "?") {
+					separator = "&"
+				}
+				target += separator + r.URL.RawQuery
+			}
+			http.Redirect(w, r, target, rule.status)
+			return true
+		}
+	}
+	return false
+}
+
 func NewStatic(directory string, exists func(string) bool) (*Static, error) {
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		return nil, err
 	}
+	return NewStaticRoot(root, exists)
+}
+
+// NewStaticRoot takes ownership of root, including on validation failure.
+func NewStaticRoot(root *os.Root, exists func(string) bool) (*Static, error) {
 	s := &Static{Root: root, PageExists: exists}
+	info, err := root.Lstat("_redirects")
+	if err != nil || !info.Mode().IsRegular() {
+		root.Close()
+		return nil, fmt.Errorf("redirects must be a regular file")
+	}
 	f, err := root.Open("_redirects")
 	if err != nil {
 		root.Close()
@@ -72,7 +139,11 @@ func NewStatic(directory string, exists func(string) bool) (*Static, error) {
 }
 
 func securityHeaders(w http.ResponseWriter) {
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' analytics.umami.is https://s3.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self'; connect-src 'self' analytics.umami.is; font-src 'self'; frame-src https://www.tradingview-widget.com https://s.tradingview.com")
+	mediaOrigin := ""
+	if media, err := url.Parse(os.Getenv("MEDIA_BASE_URL")); err == nil && (media.Scheme == "http" || media.Scheme == "https") && media.Host != "" && media.User == nil {
+		mediaOrigin = " " + media.Scheme + "://" + media.Host
+	}
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' analytics.umami.is https://s3.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:"+mediaOrigin+"; media-src 'self'"+mediaOrigin+"; connect-src 'self' analytics.umami.is; font-src 'self'; frame-src https://www.tradingview-widget.com https://s.tradingview.com")
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
