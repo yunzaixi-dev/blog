@@ -344,3 +344,7 @@ frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言�
 用户要求复用现有集群镜像仓库。`harbor.agentwego.com` 现由 Zot/S3 承载，不按旧 Harbor API 或 GHCR 包公开流程接入。博客使用独立路径 `zaixi/blog`，新增 `blog-push` 读写身份与 `blog-pull` 只读身份，原有账户及仓库策略保持不变。Sengi publish 使用博客专用 secrets，不获取 registry admin 或其他应用身份；集群通过博客专用 imagePullSecret 拉取固定 digest。
 
 main 首次发布在 artifact 下载后 `docker load` 报 `unexpected EOF`，尚未执行 registry 登录。镜像归档改为 gzip 压缩，并在上传前、下载后验证完整性，失败不发布，不重建替代镜像。仍保留只读构建／隔离发布 job、本地重测试与后端就绪后显式 Pages 发布顺序。
+
+### 运行时 Git 兼容性
+
+git-sync v4.8 调用新版 `git config list`，Bookworm 的 Git 2.39 不支持该入口，首次集群启动在导入前即失败。运行时 Node 24 基础镜像改用 Trixie，保留固定 git-sync 版本与其所需新版 Git；构建阶段不变。本地 publication 镜像测试改为启动真正的 git-sync，从只读 Git 源完成一次同步并调用导入 hook，再检查 PG API 与无解析器进程，避免仅直接调用 hook 掩盖启动依赖问题。

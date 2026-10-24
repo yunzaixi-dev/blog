@@ -20,7 +20,8 @@ const environment = [
   return ['--env', key]
 })
 const network = process.env.TEST_DOCKER_NETWORK || 'host'
-// git-sync invokes exechook from a checkout, not /app. Preserve that actual cwd.
+// Exercise the real git-sync binary and its Git dependency, not just the hook.
+// A local read-only Git source avoids making verification depend on GitHub.
 execFileSync(
   'docker',
   [
@@ -30,12 +31,25 @@ execFileSync(
     network,
     ...environment,
     '--mount',
-    `type=bind,src=${path.resolve('.')},dst=/data/git/current,readonly`,
-    '--workdir',
-    '/data/git/current',
+    `type=bind,src=${path.resolve('.')},dst=/source,readonly`,
+    '--read-only',
+    '--tmpfs',
+    '/tmp:rw,uid=1000,gid=1000,mode=1777',
+    '--tmpfs',
+    '/data:rw,uid=1000,gid=1000,mode=0755',
+    '--env',
+    'HOME=/tmp',
     '--entrypoint',
-    '/app/scripts/import-current.sh',
+    '/usr/local/bin/git-sync',
     image,
+    '--repo=file:///source',
+    '--ref=HEAD',
+    '--root=/data/git',
+    '--link=current',
+    '--one-time',
+    '--submodules=off',
+    '--exechook-command=/app/scripts/import-current.sh',
+    '--exechook-timeout=5m',
   ],
   { stdio: 'inherit', timeout: 300_000 }
 )
