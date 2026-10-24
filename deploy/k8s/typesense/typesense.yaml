@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: typesense
+  namespace: blog
+spec:
+  selector:
+    app.kubernetes.io/name: blog-typesense
+  ports:
+    - name: http
+      port: 8108
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: typesense
+  namespace: blog
+spec:
+  serviceName: typesense
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blog-typesense
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: blog-typesense
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: prod-sg-db-03
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: data-permissions
+          image: registry.k8s.io/git-sync/git-sync@sha256:a20644562fba94773e594885cb001aadb5a3172175f13ac1215e5b2033c9200e
+          command: [/bin/sh, -ec]
+          args: ['chown 1000:1000 /data']
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, DAC_OVERRIDE]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: typesense
+          image: typesense/typesense:29.0@sha256:316b7e71c21f7e5e5caa8daa150e1b3f2be8c876081ee1f77bc2d92cd7f137d0
+          args: [--data-dir=/data, --enable-cors=false]
+          env:
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: blog-typesense
+                  key: TYPESENSE_API_KEY
+          ports:
+            - name: http
+              containerPort: 8108
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '2', memory: 1Gi }
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: blog-typesense
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: typesense-private
+  namespace: blog
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blog-typesense
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: blog
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: blog-importer
+      ports:
+        - protocol: TCP
+          port: 8108
