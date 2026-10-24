@@ -55,8 +55,10 @@ func TestPublicationIntegration(t *testing.T) {
 	defer worker.Close()
 	importer := ImporterFromEnv(worker.Build)
 	_, err = importer.S3.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(importer.Bucket)})
-	if err != nil && !strings.Contains(err.Error(), "BucketAlreadyOwnedByYou") {
-		t.Fatal(err)
+	if err != nil {
+		if _, headErr := importer.S3.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(importer.Bucket)}); headErr != nil {
+			t.Fatal(err, headErr)
+		}
 	}
 	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, importer.Bucket)
 	if _, err = importer.S3.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: aws.String(importer.Bucket), Policy: aws.String(policy)}); err != nil {

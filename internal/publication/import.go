@@ -45,8 +45,10 @@ func (i *Importer) InitializeLocalBucket(ctx context.Context) error {
 		return fmt.Errorf("local bucket initialization requires the isolated S3 endpoint")
 	}
 	_, err := i.S3.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(i.Bucket)})
-	if err != nil && !strings.Contains(err.Error(), "BucketAlreadyOwnedByYou") {
-		return err
+	if err != nil {
+		if _, headErr := i.S3.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(i.Bucket)}); headErr != nil {
+			return fmt.Errorf("create local bucket: %w; access check: %v", err, headErr)
+		}
 	}
 	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, i.Bucket)
 	_, err = i.S3.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: aws.String(i.Bucket), Policy: aws.String(policy)})

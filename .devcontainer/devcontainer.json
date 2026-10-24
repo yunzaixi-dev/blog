@@ -12,7 +12,7 @@
     "45101": { "label": "Go API" },
     "45102": { "label": "PostgreSQL" },
     "45103": { "label": "Typesense" },
-    "45104": { "label": "MinIO S3" },
-    "45105": { "label": "MinIO console" }
+    "45104": { "label": "Local S3" },
+    "45105": { "label": "SeaweedFS Admin UI" }
   }
 }

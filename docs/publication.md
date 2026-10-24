@@ -28,7 +28,7 @@ pnpm dlx @devcontainers/cli up --workspace-folder .
 pnpm dlx @devcontainers/cli exec --workspace-folder . pnpm dev:full
 ```
 
-Node 24、Go 1.26.10、PostgreSQL 18、Typesense 29、MinIO 由 `.devcontainer/compose.yaml` 提供，全部使用专用测试凭据和独立卷。宿主仅 loopback 暴露 45100 React、45101 Go、45102 PG、45103 Typesense、45104 S3、45105 MinIO console。parity 使用 45110；不读取生产 R2/PG/Typesense 凭据。`dev:full` 构建、迁移、初始化本地 bucket、导入当前 checkout，再启动 React/Go。
+Node 24、Go 1.26.10、PostgreSQL 18、Typesense 29、SeaweedFS mini S3 由 `.devcontainer/compose.yaml` 提供，全部使用专用测试凭据和独立卷。宿主仅 loopback 暴露 45100 React、45101 Go、45102 PG、45103 Typesense、45104 S3、45105 SeaweedFS Admin UI。为保持已有入口，S3 服务 DNS 仍名为 `minio`，数据使用新 `seaweedfs-data` 卷，旧 MinIO 卷保留。测试身份仅限 `blog-test-media` bucket；匿名图片读取按该 bucket 的 GetObject policy 验证。parity 使用 45110；不读取生产 R2/PG/Typesense 凭据。`dev:full` 构建、迁移、初始化本地 bucket、导入当前 checkout，再启动 React/Go。
 
 ```bash
 pnpm dlx @devcontainers/cli exec --workspace-folder . pnpm test:integration

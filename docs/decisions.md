@@ -321,6 +321,6 @@ frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言�
 
 **决策**：按用户要求使用现有 CNPG app-db 的独立 blog 库。不可变 releases 存储公开 JSON snapshot、collection 映射与 media manifest，publication.active_revision 是唯一公开切版点。独立 importer 固定 Git SHA、持 session advisory lock，安全 Node stdio parser 生成公开投影，R2 上传不可变 release 对象，Typesense 完成双语索引并核对逐行结果及 count，最终单个 PG 事务发布。API reader 不启动 parser，不扫描 Git、不内存搜索。同步和导入失败继续服务最后 committed active；没有 active、PG/Typesense 读取失败才 503。R2 使用已建立公开域名，不新增私有代理或 Pages Functions。
 
-依赖证据由 planner 本次核实：pgx 14,352 stars、AWS SDK Go 3,670 stars、Typesense 27,035 stars；implementer 经 GitHub API 核实 MinIO 61,301 stars，均超过 1,000 门槛。MinIO 仓库已 archived，不声称活跃维护；仅以固定镜像 digest 用作本地和 CI 的隔离 S3 模拟器，不用于生产，使用独立测试凭据与数据卷。生产 R2 通过官方 AWS SDK Go v2 访问。部署和发布协议见 [publication.md](./publication.md)。
+依赖证据由 planner 本次核实：pgx 14,352 stars、AWS SDK Go 3,670 stars、Typesense 27,035 stars、SeaweedFS 35,710 stars，均超过 1,000 门槛。最初采用的 MinIO 已 archived，且实际 Sengi 匿名拉取失败，官方 Quay 镜像也无可用 manifest；本地和 CI 改用官方 `chrislusf/seaweedfs:4.17` 的固定 digest、mini S3 模式和独立卷。使用独立测试凭据，写权限限测试 bucket；保留 `minio` 服务 DNS 供既有本地入口兼容，旧 MinIO 卷不删除或复用。生产 R2 仍通过官方 AWS SDK Go v2 访问。部署和发布协议见 [publication.md](./publication.md)。
 
 **后果**：导入失败不发布半版，旧索引保留避免并发清理；草稿和删除经新 release 从正文/索引消失，已公开 R2 对象不承诺密码学撤回。应用发布采用镜像与 Pages 两阶段显式门控，后端真实就绪后才允许 Pages 手动发布同 SHA。

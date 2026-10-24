@@ -55,15 +55,15 @@ services:
       timeout: 5s
       retries: 30
   minio:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-    command: [server, /data, --console-address, ':9001']
-    environment:
-      MINIO_ROOT_USER: blog-local-only
-      MINIO_ROOT_PASSWORD: blog-local-secret-only
+    # Keep the service DNS name for existing local S3_ENDPOINT callers.
+    image: chrislusf/seaweedfs:4.17@sha256:186de7ef977a20343ee9a5544073f081976a29e2d29ecf8379891e7bf177fbe9
+    command: [mini, -dir=/data, -s3.port=9000, -admin.port=9001, -s3.config=/etc/seaweedfs/s3.json, -master.telemetry=false]
     ports: [127.0.0.1:45104:9000, 127.0.0.1:45105:9001]
-    volumes: [minio-data:/data]
+    volumes:
+      - seaweedfs-data:/data
+      - ./s3-local.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
-      test: [CMD, curl, --fail, --silent, http://127.0.0.1:9000/minio/health/ready]
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:9000/healthz]
       interval: 2s
       timeout: 5s
       retries: 30
@@ -72,3 +72,4 @@ volumes:
   postgres-data:
   typesense-data:
   minio-data:
+  seaweedfs-data:
