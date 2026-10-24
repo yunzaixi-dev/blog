@@ -24,6 +24,8 @@ pnpm preview --no-build --port 45100
 
 完整应用发布在 Linux 宿主运行 `pnpm verify:local`。入口自动创建使用 `.devcontainer` 定义的独立测试项目，在容器内运行下述检查以及真实 PG/Typesense/S3 发布集成；宿主只编排 Docker 和实际运行时镜像 smoke。无需手动进入容器，也不复用开发数据库或占用开发端口。应用 push hook 自动执行，纯文章和媒体 push 保持独立导入。隔离与证据说明见 [deployment.md](./deployment.md#sengi-镜像流水线)。
 
+app 容器通过网络命名空间内的 `ip_local_reserved_ports` 保留 `45100–45142`：这些固定监听端口不再被浏览器的临时出站连接随机占用。此设置不修改宿主 sysctl，也不关闭其他服务。
+
 以下单项命令用于容器内定向诊断，不替代完整发布入口：
 
 ```bash

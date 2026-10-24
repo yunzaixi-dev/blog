@@ -5,7 +5,11 @@ import { contentOnly, verificationCompose } from '../../scripts/lib/local-verifi
 const source = () => ({
   name: 'blog-dev',
   services: {
-    app: { ports: ['45100:45100'], environment: { MEDIA_BASE_URL: 'http://localhost:45104' } },
+    app: {
+      ports: ['45100:45100'],
+      environment: { MEDIA_BASE_URL: 'http://localhost:45104' },
+      sysctls: { 'net.ipv4.ip_local_reserved_ports': '45100-45142' },
+    },
     postgres: { ports: ['45102:5432'] },
     typesense: { ports: ['45103:8108'] },
     minio: { ports: ['45104:9000', '45105:9001'] },
@@ -50,6 +54,9 @@ describe('local verification isolation', () => {
     expect(config.volumes?.database).toEqual({})
     expect(config.networks?.default).toEqual({})
     expect(config.services.app.ports).toEqual([])
+    expect(config.services.app.sysctls).toEqual({
+      'net.ipv4.ip_local_reserved_ports': '45100-45142',
+    })
     expect(config.services.app.environment.MEDIA_BASE_URL).toBe('http://minio:9000/blog-test-media')
     for (const service of ['postgres', 'typesense', 'minio']) {
       expect(config.services[service].ports).toHaveLength(1)

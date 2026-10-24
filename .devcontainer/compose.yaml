@@ -6,6 +6,9 @@ services:
       dockerfile: .devcontainer/Dockerfile
       network: host
     init: true
+    # Keep fixed test listeners out of Linux's ephemeral client-port allocator.
+    sysctls:
+      net.ipv4.ip_local_reserved_ports: '45100-45142'
     volumes:
       - ..:/workspaces/blog:cached
       - node-modules:/workspaces/blog/node_modules
