@@ -31,7 +31,7 @@
     "server/**/*.ts",
     "vite*.ts"
   ],
-  "ignoreBinaries": ["scripts/quality-html.sh", "go", "gofmt", "test"],
+  "ignoreBinaries": ["scripts/quality-html.sh", "go", "gofmt", "test", "python3"],
   "ignoreDependencies": [
     "@tailwindcss/typography",
     "eslint-config-prettier",

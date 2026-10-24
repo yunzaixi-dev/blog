@@ -23,7 +23,7 @@
 
 按 diff 范围运行存在的命令；命令不存在时报告 `NOT_AVAILABLE`，不得当作通过。
 
-完整应用交付使用 `pnpm verify:local`：在独立 devcontainer 项目中运行以下门禁及浏览器、集成、性能检查；宿主只调度 Docker 与实际运行时镜像检查。不要以宿主字体环境的通过替代容器内浏览器证据。云端仅构建、轻量 smoke 与发布，不重复重测试。应用 push hook 自动调用该入口，纯内容 push 不构建应用。
+完整应用交付使用 `pnpm verify:local`：在独立 devcontainer 项目中运行以下门禁及浏览器、集成、性能检查；宿主只调度 Docker 与实际运行时镜像检查。不要以宿主字体环境的通过替代容器内浏览器证据。`pnpm release:local image|pages` 交付精确本地产物；云端只做 SHA/diff 与已发布 digest 检查，不重建、不传输镜像或重复重测试。应用 push hook 自动调用完整本地入口，纯内容 push 不构建应用。
 
 ```bash
 git status --short && git diff --name-only && git diff --stat && git diff --check

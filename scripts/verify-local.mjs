@@ -151,7 +151,15 @@ try {
   await inApp([...fileMode, 'pnpm', 'test:e2e'])
   await inApp([...fileMode, 'pnpm', 'test:e2e:parity'])
   await inApp([...fileMode, 'pnpm', 'perf:check'])
-  await run('docker', ['build', '--network=host', '--tag', image, '.'])
+  await run('docker', [
+    'build',
+    '--network=host',
+    '--label',
+    `org.opencontainers.image.revision=${sha}`,
+    '--tag',
+    image,
+    '.',
+  ])
   await run('node', ['scripts/test-container.mjs', image])
   /** @param {string} service @param {number} port */
   const address = (service, port) =>
@@ -210,6 +218,9 @@ try {
     encoding: 'utf8',
   }).trim()
   await mkdir(path.join(root, '.cache'), { recursive: true })
+  const pagesDirectory = path.join(root, '.cache', `verified-pages-${sha}`)
+  await rm(pagesDirectory, { recursive: true, force: true })
+  await cp(path.join(checkout, 'out'), pagesDirectory, { recursive: true })
   await writeFile(
     path.join(root, '.cache/local-verification.json'),
     JSON.stringify(
@@ -217,6 +228,7 @@ try {
         source: sha,
         workingTreeChanges: changes,
         imageID,
+        pagesDirectory,
         completedAt: new Date().toISOString(),
         environment: 'devcontainer; host Docker orchestrates runtime image checks',
       },

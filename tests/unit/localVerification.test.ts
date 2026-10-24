@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { contentOnly, verificationCompose } from '../../scripts/lib/local-verification.mjs'
+import { assertReleaseCandidate } from '../../scripts/lib/local-release.mjs'
 
 const source = () => ({
   name: 'blog-dev',
@@ -19,7 +20,7 @@ const source = () => ({
 })
 
 describe('local verification isolation', () => {
-  it('keeps heavy tests local and publishes the smoke-tested image without rebuilding', () => {
+  it('keeps builds, tests and full-image transfers out of cloud CI', () => {
     const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8')
     for (const command of [
       'playwright install',
@@ -29,19 +30,46 @@ describe('local verification isolation', () => {
       'pnpm test:integration',
       'docker compose',
       'test-container-publication',
+      'setup-buildx-action',
+      'build-push-action',
+      'docker save',
+      'docker load',
+      'download-artifact',
+      'pnpm install',
     ]) {
       expect(workflow).not.toContain(command)
     }
-    expect(workflow).toContain('node scripts/test-container.mjs "$IMAGE"')
-    expect(workflow).toContain('docker save "$IMAGE" | gzip -1 > blog-image.tar.gz')
-    const publish = workflow.split('  publish:')[1].split('  pages:')[0]
-    expect(publish).toContain('gzip -t blog-image.tar.gz')
-    expect(publish).toContain('docker load --input blog-image.tar.gz')
-    expect(publish).toContain('docker push "$IMAGE"')
-    expect(publish).not.toContain('build-push-action')
-    expect(workflow).toContain('harbor.agentwego.com/zaixi/blog:')
+    expect(workflow).toContain('git diff --check HEAD^ HEAD')
+    expect(workflow).toContain('fetch-depth: 2')
+    expect(workflow).toContain('https://harbor.agentwego.com/v2/zaixi/blog/manifests/$DIGEST')
     expect(workflow).not.toContain('packages: write')
-    expect(workflow).toContain('inputs.deploy_pages')
+    const release = readFileSync('scripts/release-local.mjs', 'utf8')
+    expect(release).toContain("['push', tag]")
+    expect(release).not.toContain("['build'")
+  })
+  it('rejects dirty, stale or incomplete local release evidence', () => {
+    const report = {
+      source: 'a'.repeat(40),
+      workingTreeChanges: '',
+      imageID: `sha256:${'1'.repeat(64)}`,
+      pagesDirectory: '/verified/pages',
+    }
+    expect(() => assertReleaseCandidate(report, report.source, '')).not.toThrow()
+    expect(() => assertReleaseCandidate(report, 'b'.repeat(40), '')).toThrow(
+      'verified clean source'
+    )
+    expect(() => assertReleaseCandidate(report, report.source, 'M app/main.tsx')).toThrow(
+      'verified clean source'
+    )
+    expect(() =>
+      assertReleaseCandidate({ ...report, workingTreeChanges: 'M x' }, report.source, '')
+    ).toThrow('verified clean source')
+    expect(() =>
+      assertReleaseCandidate({ ...report, pagesDirectory: undefined }, report.source, '')
+    ).toThrow('lacks')
+    expect(() =>
+      assertReleaseCandidate({ ...report, imageID: 'tag:latest' }, report.source, '')
+    ).toThrow('lacks')
   })
   it('only exempts independent content updates, never application or mixed changes', () => {
     expect(contentOnly(['content/blog/zh/a.md', 'public/static/images/a.webp'])).toBe(true)

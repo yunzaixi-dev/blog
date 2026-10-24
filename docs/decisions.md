@@ -348,3 +348,9 @@ main 首次发布在 artifact 下载后 `docker load` 报 `unexpected EOF`，尚
 ### 运行时 Git 兼容性
 
 git-sync v4.8 调用新版 `git config list`，Bookworm 的 Git 2.39 不支持该入口，首次集群启动在导入前即失败。运行时 Node 24 基础镜像改用 Trixie，保留固定 git-sync 版本与其所需新版 Git；构建阶段不变。本地 publication 镜像测试改为启动真正的 git-sync，从只读 Git 源完成一次同步并调用导入 hook，再检查 PG API 与无解析器进程，避免仅直接调用 hook 掩盖启动依赖问题。
+
+## ADR-0024 三十秒云端检查，不中转或重建镜像
+
+用户要求 CI/CD 优化到三十秒内。实际云端构建超过两分钟，整镜像 artifact 下载与上传又耗数分钟；仅迁移测试不足以达标。改为本地 devcontainer 验证并保留已测镜像与生产 Pages artifact，`release:local` 将精确 image ID 推到 Zot，不重建；main 必须本地重新验证对应干净 SHA，旧或 dirty 报告直接拒绝。
+
+云端只做 checkout、SHA/diff 检查，手动确认仅 HEAD 已存在的 digest。三十秒是实际提交至完成的验收指标，排队计入，不保证任意冷启动或网络条件下恒定达标。构建、上传及集群 rollout 的时间仍如实单独报告，不把它们改名隐藏。后端就绪后才部署同 SHA 的 Pages；当前已发布的修复镜像继续完成本次上线，不为策略调整额外重建。
