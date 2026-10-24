@@ -336,3 +336,11 @@ frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言�
 用户同时要求不再默认启动子代理：当前 agent 顺序完成 planner、implementer、reviewer 职责，复用有效证据，但确定性门禁及失败处理标准不减。
 
 **后果**：本地需要 Docker 和容器依赖下载，验证会增加本地 push 耗时；云端耗时集中在必要构建。字体差异导致的两项原布局断言保持不变，正文 gutter 下限改为 16px、移动卡片只收紧留白，不缩正文和目标尺寸。修改测试策略不会把既有失败变成通过，仍须完整本地验收。
+
+## ADR-0023 复用自有 Zot 镜像仓库
+
+日期：2026-10-24（取代 ADR-0020、0022 中 GHCR 发布及 packages 权限安排）
+
+用户要求复用现有集群镜像仓库。`harbor.agentwego.com` 现由 Zot/S3 承载，不按旧 Harbor API 或 GHCR 包公开流程接入。博客使用独立路径 `zaixi/blog`，新增 `blog-push` 读写身份与 `blog-pull` 只读身份，原有账户及仓库策略保持不变。Sengi publish 使用博客专用 secrets，不获取 registry admin 或其他应用身份；集群通过博客专用 imagePullSecret 拉取固定 digest。
+
+main 首次发布在 artifact 下载后 `docker load` 报 `unexpected EOF`，尚未执行 registry 登录。镜像归档改为 gzip 压缩，并在上传前、下载后验证完整性，失败不发布，不重建替代镜像。仍保留只读构建／隔离发布 job、本地重测试与后端就绪后显式 Pages 发布顺序。
