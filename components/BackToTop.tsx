@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useScroll, useMotionValueEvent } from 'motion/react'
 import RevealButton from '@/components/animata/RevealButton'
 import Icon from '@/components/Icon'
 
 export default function BackToTop({ label, onClick }: { label: string; onClick: () => void }) {
   const [visible, setVisible] = useState(false)
+  const visibleRef = useRef(false)
   const { scrollY } = useScroll()
 
-  useMotionValueEvent(scrollY, 'change', (y) => setVisible(y > 420))
+  useMotionValueEvent(scrollY, 'change', (y) => {
+    const next = y > 420
+    if (next !== visibleRef.current) {
+      visibleRef.current = next
+      setVisible(next)
+    }
+  })
 
   return (
     <RevealButton

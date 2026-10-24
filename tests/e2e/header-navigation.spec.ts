@@ -74,6 +74,10 @@ for (const { width, locale, openLabel, closeLabel, navigationLabel, activeLink }
     const header = page.getByRole('banner')
     const logo = header.locator('[data-header-logo]')
     const controls = header.locator('[data-header-controls]')
+    await expect(logo).toHaveText('zaixi.dev')
+    await expect(logo.locator('img')).toHaveCount(0)
+    await expectTouchTarget(logo.getByRole('link'))
+    await expect(header).toHaveCSS('backdrop-filter', 'none')
     const button = header.getByRole('button', { name: openLabel })
     const languageSwitcher = controls.locator('[data-header-language-switcher]')
     const mobileLanguageSwitch = languageSwitcher.locator('[data-language-switcher-mobile]')
@@ -157,6 +161,20 @@ test('mobile disclosure closes on Escape, route changes, and the desktop breakpo
       .getByRole('navigation', { name: '主导航' })
       .getByRole('link', { name: '分类', exact: true })
   ).toBeVisible()
+})
+
+test('the text brand remains readable at 200% text size on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
+  await page.goto('/zh/')
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = '200%'
+  })
+  const header = page.getByRole('banner')
+  const logo = header.locator('[data-header-logo]')
+  await expect(logo).toHaveText('zaixi.dev')
+  await expectNoIntersection(logo, header.locator('[data-header-controls]'))
+  await expectInsideViewport(logo, page)
+  await expectNoHorizontalOverflow(page)
 })
 
 test('an open mobile disclosure keeps the reading header visible while scrolling', async ({

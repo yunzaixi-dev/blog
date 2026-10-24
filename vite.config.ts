@@ -1,4 +1,6 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import type { Logger } from 'babel-plugin-react-compiler'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -6,6 +8,15 @@ import { portNumber } from './scripts/lib/ports.mjs'
 
 const devPort = portNumber(process.env.DEV_PORT, 45100)
 const apiPort = portNumber(process.env.API_PORT, devPort + 1)
+const compiled = new Set<string>()
+const compilerLogger: Logger = {
+  logEvent(filename, event) {
+    if (filename && event.kind === 'CompileSuccess')
+      compiled.add(
+        `${path.relative(process.cwd(), filename)}:${event.fnName || `line-${event.fnLoc?.start.line}`}`
+      )
+  },
+}
 
 if (existsSync('.git')) {
   process.env.GIT_COMMIT_HASH ||= execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
@@ -18,6 +29,24 @@ if (existsSync('.git')) {
 
 export default defineConfig({
   plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler', { target: '19', logger: compilerLogger }]],
+      },
+    }),
+    {
+      name: 'react-compiler-evidence',
+      buildStart() {
+        compiled.clear()
+      },
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: '.vite/react-compiler.json',
+          source: JSON.stringify([...compiled].sort()),
+        })
+      },
+    },
     {
       name: 'runtime-document',
       configureServer(server) {

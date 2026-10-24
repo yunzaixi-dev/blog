@@ -82,6 +82,8 @@ export default function BlogListNavigationRecorder({
       const targetIsArticle = isBlogPostPath(targetUrl.pathname)
 
       const readTreeSnapshot = (root: HTMLElement) => {
+        // Hidden responsive trees have no transition surface to reproduce.
+        if (root.getClientRects().length === 0) return null
         let nodes: ReturnType<typeof parseContentTreeNodes> = null
 
         try {

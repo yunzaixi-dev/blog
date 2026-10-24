@@ -115,7 +115,7 @@ function TransitionSurface({
       layout
       layoutDependency={layoutMode}
       data-article-transition-overlay-surface
-      className="article-reading-surface dark:bg-surface-card-dark absolute z-10 overflow-hidden bg-white shadow-[0_18px_50px_rgba(15,23,42,0.18)] ring-1 ring-slate-950/5 dark:shadow-black/30 dark:ring-white/10"
+      className="article-reading-surface dark:bg-surface-card-dark absolute z-10 overflow-hidden bg-white shadow-sm ring-1 ring-slate-950/5 lg:shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:shadow-black/30 dark:ring-white/10"
       style={containStyle}
       initial={state.reducedMotion && state.phase === 'opening' ? { opacity: 0.72 } : false}
       animate={reducedOpacity === undefined ? { opacity: 1 } : { opacity: reducedOpacity }}

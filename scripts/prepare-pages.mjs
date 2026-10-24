@@ -1,4 +1,4 @@
-import { readFile, writeFile, rm } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 
 const api = process.env.API_BASE_URL
 if (api !== 'https://api.zaixi.dev')
@@ -23,5 +23,15 @@ await writeFile(
     .replace("media-src 'self'", `media-src 'self' ${api} ${media}`)
 )
 const html = await readFile('out/index.html', 'utf8')
-await writeFile('out/index.html', html.replace('href="/feed.xml"', `href="${api}/feed.xml"`))
+const shell = html.replace('href="/feed.xml"', `href="${api}/feed.xml"`)
+await writeFile('out/index.html', shell)
+// Replace old Pages HTML mappings on every application release. This fixed
+// migration inventory does not make future content publishing require a build.
+const routes = JSON.parse(await readFile('data/pagesMigrationRoutes.json', 'utf8'))
+for (const route of routes) {
+  if (!/^\/(zh|en)\/(?:[^.?#\\]+\/)?$/.test(route))
+    throw new Error(`Invalid Pages migration route: ${route}`)
+  await mkdir(`out${route}`, { recursive: true })
+  await writeFile(`out${route}index.html`, shell)
+}
 console.log('Prepared Pages shell, API CSP, backend media redirects and client-route fallback')

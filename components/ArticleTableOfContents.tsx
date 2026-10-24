@@ -83,6 +83,9 @@ export default function ArticleTableOfContents({
     }
 
     let frame = 0
+    let active = ''
+    const media = window.matchMedia('(min-width: 1024px)')
+    const isTracking = () => (variant === 'desktop' ? media.matches : !media.matches && open)
     const updateActive = () => {
       frame = 0
       let nextActive = headingElements[0].id
@@ -93,24 +96,34 @@ export default function ArticleTableOfContents({
         }
       }
 
-      setActiveId((current) => (current === nextActive ? current : nextActive))
+      if (active !== nextActive) {
+        active = nextActive
+        setActiveId(nextActive)
+      }
     }
     const onScroll = () => {
-      if (frame === 0) {
+      if (isTracking() && frame === 0) {
         frame = window.requestAnimationFrame(updateActive)
       }
     }
 
-    updateActive()
+    const syncViewport = () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame)
+      frame = 0
+      if (isTracking()) updateActive()
+    }
+    syncViewport()
+    media.addEventListener('change', syncViewport)
     window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       window.removeEventListener('scroll', onScroll)
+      media.removeEventListener('change', syncViewport)
       if (frame !== 0) {
         window.cancelAnimationFrame(frame)
       }
     }
-  }, [headings])
+  }, [headings, open, variant])
 
   if (headings.length === 0) {
     return null
