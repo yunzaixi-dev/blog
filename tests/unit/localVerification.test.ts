@@ -39,7 +39,8 @@ describe('local verification isolation', () => {
     ]) {
       expect(workflow).not.toContain(command)
     }
-    expect(workflow).toContain('git show --format= --check HEAD')
+    expect(workflow).toContain('git diff --check HEAD^ HEAD')
+    expect(workflow).toContain('fetch-depth: 2')
     expect(workflow).toContain('https://harbor.agentwego.com/v2/zaixi/blog/manifests/$DIGEST')
     expect(workflow).not.toContain('packages: write')
     const release = readFileSync('scripts/release-local.mjs', 'utf8')

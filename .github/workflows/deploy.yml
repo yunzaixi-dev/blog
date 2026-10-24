@@ -27,6 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 2
           persist-credentials: false
           ref: ${{ inputs.commit_sha || github.sha }}
       - name: Check the exact source without building or running tests
@@ -35,7 +36,7 @@ jobs:
         run: |
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          git show --format= --check HEAD
+          git diff --check HEAD^ HEAD
       - name: Verify the already published manifest
         if: github.event_name == 'workflow_dispatch'
         env:
