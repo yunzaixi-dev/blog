@@ -1,41 +1,41 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "next.config.js",
     "postcss.config.js",
     "prettier.config.js",
     "eslint.config.mjs",
     "playwright.config.ts",
     "vitest.config.ts",
-    "contentlayer.config.ts",
     "app/**/*.{ts,tsx}",
-    "contentlayer/**/*.{ts,tsx}",
     "scripts/**/*.mjs",
-    "tests/**/*.{ts,tsx}"
+    "tests/**/*.{ts,tsx}",
+    "app/main.tsx",
+    "vite.config.ts",
+    "vite.worker.config.ts",
+    "server/content-worker.ts",
+    "scripts/*.mjs"
   ],
   "project": [
     "app/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
-    "contentlayer/**/*.{ts,tsx}",
-    "contentlayer.config.ts",
+    "content-pipeline/**/*.{ts,tsx}",
     "data/**/*.{ts,tsx}",
     "layouts/**/*.{ts,tsx}",
     "lib/**/*.{ts,tsx}",
-    "next.config.js",
     "playwright.config.ts",
     "postcss.config.js",
     "prettier.config.js",
     "scripts/**/*.{js,mjs}",
     "tests/**/*.{ts,tsx}",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "server/**/*.ts",
+    "vite*.ts"
   ],
-  "ignoreBinaries": ["scripts/quality-html.sh", "pagefind"],
+  "ignoreBinaries": ["scripts/quality-html.sh", "go", "gofmt", "test"],
   "ignoreDependencies": [
     "@tailwindcss/typography",
-    "eslint-config-next",
     "eslint-config-prettier",
     "eslint-plugin-jsx-a11y",
-    "pagefind",
     "sharp",
     "tailwindcss"
   ]

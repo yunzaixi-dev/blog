@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect, useId, useState } from 'react'
 import CollapsiblePanel from '@/components/animata/CollapsiblePanel'
 import Icon from '@/components/Icon'
@@ -44,7 +42,7 @@ function TocLinks({
               href={heading.url}
               aria-current={active ? 'location' : undefined}
               onClick={() => onNavigate?.(id)}
-              className={`block border-l-2 ${linkPadding} transition-colors duration-200 ${
+              className={`block border-l-2 ${linkPadding} ${
                 active
                   ? 'border-sky-500 font-medium text-sky-700 dark:border-sky-400 dark:text-sky-300'
                   : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-sky-700 dark:border-white/10 dark:text-white/70 dark:hover:border-white/20 dark:hover:text-sky-300'

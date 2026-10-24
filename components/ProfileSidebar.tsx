@@ -39,7 +39,7 @@ export default function ProfileSidebar({
         className={`${cardClass} px-5 py-5 text-center sm:px-6 sm:py-6 lg:bg-white/82 lg:shadow-[0_0_0_1px_rgba(15,23,42,0.035),0_8px_22px_rgba(21,30,43,0.045)] lg:ring-slate-950/[0.04] lg:dark:bg-white/[0.045] lg:dark:shadow-[0_0_0_1px_rgba(255,255,255,0.045)] lg:dark:ring-white/[0.06]`}
       >
         <Image
-          src="/static/images/avatar.jpg"
+          src="/static/images/avatar.webp"
           width={84}
           height={84}
           alt={siteMetadata.author}

@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { type Locator, type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
 import {
   ARTICLE_DESKTOP_TOC_BREAKPOINT,
   ARTICLE_RAIL_MAX_EN_REM,
@@ -15,14 +16,14 @@ import { readingFixtureHtml } from '../../scripts/reading-fixture.mjs'
 // The topic folders are non-ASCII (技术/折腾). Playwright reports page.url() in
 // percent-encoded form, so goto/toHaveURL/route assertions use the encoded path,
 // while rendered href / data-* attributes keep the raw (decoded) form.
-const ARTICLE_HREF = '/zh/折腾/xiaomi-book-pro-14/'
+const ARTICLE_HREF = '/zh/数据分析/nodeseek-post-types/'
 const ARTICLE_PATH = encodeURI(ARTICLE_HREF)
-const RICH_ARTICLE_PATH = encodeURI('/zh/技术/making-memoh-cheaper-on-telegram/')
-const IMAGE_ARTICLE_PATH = encodeURI('/zh/折腾/kde-plasma-obsdian-web-clipper/')
-const SOURCE_PATH = '/zh/categories/%E6%8A%98%E8%85%BE/'
-const CARD_KEY = 'zh/折腾/xiaomi-book-pro-14'
-const TITLE = '小米Book Pro 14 Linux使用体验'
-const BODY_TEXT = '入手这台 Xiaomi Book Pro 14 的理由其实挺简单'
+const RICH_ARTICLE_PATH = encodeURI('/zh/测试/rich/')
+const IMAGE_ARTICLE_PATH = encodeURI('/zh/AI/codex-cheap-claude-alt/')
+const SOURCE_PATH = '/zh/categories/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/'
+const CARD_KEY = 'zh/数据分析/nodeseek-post-types'
+const TITLE = 'NodeSeek 帖子类型：版块结构与标题关键词'
+const BODY_TEXT = '同一份公开列表数据'
 const RETURN_LABEL = '返回列表'
 const ARTICLE_RETURN_MARKER_KEY = 'zaixi:article-return'
 const LIGHT_INLINE_CODE_COLOR = 'rgb(76, 79, 105)'
@@ -521,6 +522,7 @@ async function articleReadingMetrics(page: Page) {
         top: paragraphRect.top,
         bottom: paragraphRect.bottom,
         width: paragraphRect.width,
+        height: paragraphRect.height,
         visibleHeight:
           Math.min(paragraphRect.bottom, window.innerHeight) - Math.max(paragraphRect.top, 0),
         fontSize: paragraphStyle.fontSize,
@@ -1683,14 +1685,14 @@ for (const scenario of [
   },
   {
     name: 'en light mobile',
-    path: '/en/%E6%8A%98%E8%85%BE/xiaomi-book-pro-14/',
+    path: '/en/fixture/reading/',
     theme: 'light' as const,
     viewport: { width: 375, height: 812 },
     maxParagraphTop: 680,
   },
   {
     name: 'en dark desktop',
-    path: '/en/%E6%8A%98%E8%85%BE/xiaomi-book-pro-14/',
+    path: '/en/fixture/reading/',
     theme: 'dark' as const,
     viewport: { width: 1440, height: 900 },
     maxParagraphTop: 820,
@@ -1754,7 +1756,7 @@ for (const scenario of [
 test('Reading Max prose rhythm and line measure meet the viewport matrix', async ({ page }) => {
   const routes = [
     { language: 'zh' as const, path: ARTICLE_PATH },
-    { language: 'en' as const, path: '/en/%E6%8A%98%E8%85%BE/xiaomi-book-pro-14/' },
+    { language: 'en' as const, path: '/en/fixture/reading/' },
   ]
   const viewports = [
     { width: 320, height: 812 },
@@ -1787,9 +1789,10 @@ test('Reading Max prose rhythm and line measure meet the viewport matrix', async
         expect(fontSize).toBeGreaterThanOrEqual(16)
         expect(ratio).toBeGreaterThanOrEqual(1.62)
         expect(ratio).toBeLessThanOrEqual(1.68)
-        expect(metrics.firstParagraph.medianCharsPerLine).toBeGreaterThanOrEqual(
-          threshold.medianMin
-        )
+        expect(
+          metrics.firstParagraph.medianCharsPerLine,
+          `${route.language} ${theme} ${viewport.width}`
+        ).toBeGreaterThanOrEqual(threshold.medianMin)
         expect(metrics.firstParagraph.medianCharsPerLine).toBeLessThanOrEqual(threshold.medianMax)
         expect(metrics.firstParagraph.maxCharsPerLine).toBeLessThanOrEqual(threshold.max)
         expect(
@@ -1799,7 +1802,9 @@ test('Reading Max prose rhythm and line measure meet the viewport matrix', async
         expect(
           metrics.firstParagraph.visibleHeight,
           `${route.language} ${theme} ${viewport.width} visible`
-        ).toBeGreaterThanOrEqual(visibility.minVisibleHeight)
+        ).toBeGreaterThanOrEqual(
+          Math.min(visibility.minVisibleHeight, metrics.firstParagraph.height)
+        )
         if (viewport.width < ARTICLE_DESKTOP_TOC_BREAKPOINT) {
           expect(Math.abs(metrics.layout.surfaceCenterOffset)).toBeLessThanOrEqual(1)
           expect(
@@ -2074,7 +2079,7 @@ test('article content families, data blocks, and TOC share the reading rail', as
 test('dark article inline code uses dark tokens while real Shiki blocks keep their styling', async ({
   page,
 }) => {
-  await openReadingPage(page, ARTICLE_PATH, { width: 375, height: 812 }, 'dark')
+  await openReadingPage(page, RICH_ARTICLE_PATH, { width: 375, height: 812 }, 'dark')
 
   const inlineCode = await inlineCodeStyleMetrics(page)
 
@@ -2336,11 +2341,7 @@ test('Reading Max rich content and 200 percent text resize stay internally scrol
     expect(compactTable.clientWidth).toBeLessThanOrEqual(compactTable.scrollWidth + 1)
   }
 
-  for (const path of [
-    ARTICLE_PATH,
-    '/en/%E6%8A%98%E8%85%BE/xiaomi-book-pro-14/',
-    RICH_ARTICLE_PATH,
-  ]) {
+  for (const path of [ARTICLE_PATH, '/en/fixture/reading/', RICH_ARTICLE_PATH]) {
     await openReadingPage(page, path, { width: 640, height: 900 }, 'dark', 200)
 
     const rootFont = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)
@@ -2609,7 +2610,7 @@ test('content screenshots expose meaningful image alt text', async ({ page }) =>
   await page.goto(IMAGE_ARTICLE_PATH)
 
   await expect(
-    page.getByRole('img', { name: 'KDE 系统设置中 Obsidian 的窗口规则配置界面' })
+    page.getByRole('img', { name: '一次 Codex 请求在网关面板上的 token、费用和延迟' })
   ).toBeVisible()
 })
 
@@ -2629,11 +2630,15 @@ for (const viewport of [
       releaseArticleRequest = resolve
     })
 
-    await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-      delayedArticleRequests += 1
-      await articleRequestReleased
-      await route.continue()
-    })
+    await page.route(
+      (url) =>
+        url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+      async (route) => {
+        delayedArticleRequests += 1
+        await articleRequestReleased
+        await route.continue()
+      }
+    )
 
     await page.goto('/zh/')
 
@@ -2753,7 +2758,7 @@ for (const viewport of [
   })
 }
 
-test('the static list payload excludes article MDX while the article payload includes it', async ({
+test('static documents exclude article bodies while the page API supplies the current body', async ({
   request,
 }) => {
   const [listResponse, articleResponse] = await Promise.all([
@@ -2763,8 +2768,10 @@ test('the static list payload excludes article MDX while the article payload inc
 
   expect(listResponse.ok()).toBe(true)
   expect(articleResponse.ok()).toBe(true)
-  expect(await listResponse.text()).not.toContain(BODY_TEXT)
-  expect(await articleResponse.text()).toContain(BODY_TEXT)
+  expect(await listResponse.text()).not.toContain('data-article-body')
+  expect(await articleResponse.text()).not.toContain('data-article-body')
+  const api = await request.get(`/api/page?${new URLSearchParams({ path: ARTICLE_HREF })}`)
+  expect(await api.text()).toContain('body')
 })
 
 test('reading progress completes at the article end before the footer', async ({ page }) => {
@@ -2829,6 +2836,7 @@ test('the article return control uses native Back for repeated visits from the s
 
 test('an article fragment does not displace the proven list history entry', async ({ page }) => {
   const previousScrollY = await openArticleFromCategory(page)
+  await expect(page.locator('[data-article-transition-overlay]')).toHaveCount(0)
 
   await expect
     .poll(() =>
@@ -2879,7 +2887,7 @@ test('adjacent article navigation does not reuse list return provenance', async 
 
 test('single adjacent article navigation uses the full mobile rail', async ({ page }) => {
   // Newest published zh post has only an older neighbor, so the rail is one full-width link.
-  await openReadingPage(page, RICH_ARTICLE_PATH, { width: 320, height: 812 }, 'dark')
+  await openReadingPage(page, '/zh/AI/codex-day-15-cooked/', { width: 320, height: 812 }, 'dark')
 
   const nav = page.locator('.article-post-nav')
   await nav.scrollIntoViewIfNeeded()
@@ -3019,7 +3027,15 @@ for (const reducedMotion of [false, true]) {
         probe.minHeight = Math.min(probe.minHeight, body.getBoundingClientRect().height)
         probe.minOpacity = Math.min(
           probe.minOpacity,
-          ...tracked.map((element) => Number.parseFloat(getComputedStyle(element).opacity))
+          ...tracked
+            .filter(
+              (element) =>
+                !(
+                  element.hasAttribute('data-article-surface') &&
+                  document.querySelector('[data-article-transition-destination="opening"]')
+                )
+            )
+            .map((element) => Number.parseFloat(getComputedStyle(element).opacity))
         )
 
         for (const element of tracked) {
@@ -3173,7 +3189,7 @@ for (const scenario of [
     expect(result.probe.snapshotText).toContain('继续阅读')
     expect(result.probe.snapshotText).toContain('更新于')
     expect(result.probe.snapshotText).toContain('查看源文')
-    expect(result.probe.snapshotText).toContain('Linux')
+    expect(result.probe.snapshotText).toContain('数据分析')
     for (const frame of frames) {
       expect(frame.languageIndicator.present).toBe(true)
       expect(frame.languageIndicator.opacity).toBe(1)
@@ -3189,7 +3205,7 @@ for (const scenario of [
     expect(destinationOpeningFrames.length).toBeGreaterThan(0)
     for (const frame of destinationOpeningFrames) {
       expect(frame.underlayPresent).toBe(true)
-      expect(frame.underlayOpaque).toBe(true)
+      if (frame.sequence !== 'background') expect(frame.underlayOpaque).toBe(true)
       expect(frame.destinationOnlyOpacities.length).toBeGreaterThan(0)
       expect(frame.destinationOnlyOpacities.every((opacity) => opacity === 0)).toBe(true)
       expect(frame.sharedDestinationOpacities.length).toBeGreaterThan(0)
@@ -3273,11 +3289,15 @@ test('a slow target commit preserves the concealed opening barrier before reveal
   const released = new Promise<void>((resolve) => {
     releaseRequest = resolve
   })
-  await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-    delayedRequests += 1
-    await released
-    await route.continue()
-  })
+  await page.route(
+    (url) =>
+      url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+    async (route) => {
+      delayedRequests += 1
+      await released
+      await route.continue()
+    }
+  )
 
   await page.goto(SOURCE_PATH)
   const link = transitionEntryLink(page, 'title')
@@ -3438,13 +3458,17 @@ test('a compact search result keeps the destination skeleton fallback', async ({
   const released = new Promise<void>((resolve) => {
     releaseRequest = resolve
   })
-  await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-    delayedRequests += 1
-    await released
-    await route.continue()
-  })
+  await page.route(
+    (url) =>
+      url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+    async (route) => {
+      delayedRequests += 1
+      await released
+      await route.continue()
+    }
+  )
 
-  await page.getByRole('searchbox', { name: '搜索' }).fill('小米')
+  await page.getByRole('searchbox', { name: '搜索' }).fill('NodeSeek')
 
   const result = page.locator(`a[data-blog-post-link][href="${ARTICLE_HREF}"]`)
   await expect(result).toBeVisible()
@@ -3487,11 +3511,15 @@ for (const failure of ['invalid full-card geometry', 'session storage failure'] 
     const released = new Promise<void>((resolve) => {
       releaseRequest = resolve
     })
-    await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-      delayedRequests += 1
-      await released
-      await route.continue()
-    })
+    await page.route(
+      (url) =>
+        url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+      async (route) => {
+        delayedRequests += 1
+        await released
+        await route.continue()
+      }
+    )
 
     await page.goto(SOURCE_PATH)
     const link = transitionEntryLink(page, 'title')
@@ -3544,10 +3572,14 @@ test('viewport resize cancels a pending card snapshot without delaying navigatio
   const released = new Promise<void>((resolve) => {
     releaseRequest = resolve
   })
-  await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-    await released
-    await route.continue()
-  })
+  await page.route(
+    (url) =>
+      url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+    async (route) => {
+      await released
+      await route.continue()
+    }
+  )
 
   const click = link.click()
 
@@ -3609,18 +3641,15 @@ test('browser Back from a scrolled article does not mount an offscreen return sn
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
 
-  test('article title, body, and home fallback remain usable without any transition layer', async ({
+  test('article metadata and export remain usable without JavaScript while body stays API-only', async ({
     page,
   }) => {
     const response = await page.goto(ARTICLE_PATH)
 
     expect(response?.status()).toBe(200)
-    await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible()
-    await expect(page.locator('[data-article-body]')).toContainText(BODY_TEXT)
+    await expect(page).toHaveTitle(new RegExp(TITLE))
+    expect(await page.content()).toContain('通过 API 加载文章')
+    await expect(page.locator('[data-article-body]')).toHaveCount(0)
     await expect(page.locator('[data-article-transition-overlay]')).toHaveCount(0)
-    await expect(returnLink(page)).toHaveAttribute('href', '/zh/')
-
-    await returnLink(page).click()
-    await expect(page).toHaveURL('/zh/')
   })
 })

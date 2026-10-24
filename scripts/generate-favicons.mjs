@@ -1,10 +1,14 @@
-// Builds the favicon set app/layout.tsx links to, from the author avatar.
+// Builds the application favicon set from the author avatar.
 import { writeFile } from 'node:fs/promises'
 import sharp from 'sharp'
 
-const source = 'public/static/images/avatar.jpg'
+const source = 'public/static/images/avatar.webp'
 const dir = 'public/static/favicons'
-const png = (/** @type {number} */ size) => sharp(source).resize(size, size).png().toBuffer()
+const png = (/** @type {number} */ size) =>
+  sharp(source)
+    .resize(size, size)
+    .png({ compressionLevel: 9, adaptiveFiltering: true, palette: false })
+    .toBuffer()
 const sizes = {
   'favicon-16x16.png': 16,
   'favicon-32x32.png': 32,

@@ -1,14 +1,12 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import siteMetadata from '@/data/siteMetadata'
 import Icon from '@/components/Icon'
 import SocialIcon from '@/components/social-icons'
 import { getLocaleFromPathname, ui } from '@/lib/i18n'
 
 export default function Footer() {
-  const commitHash = process.env.NEXT_PUBLIC_GIT_COMMIT_HASH
-  const fullCommitHash = process.env.NEXT_PUBLIC_GIT_COMMIT_FULL_HASH || commitHash
+  const commitHash = process.env.GIT_COMMIT_HASH
+  const fullCommitHash = process.env.GIT_COMMIT_FULL_HASH || commitHash
   const commitUrl =
     commitHash && fullCommitHash ? `${siteMetadata.siteRepo}/commit/${fullCommitHash}` : ''
   const locale = getLocaleFromPathname(usePathname())

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { stripMarkdownSlugExtension } from '../../contentlayer/config/computedFields'
+import { stripMarkdownSlugExtension } from '../../content-pipeline/computedFields'
 
 describe('blog slug hardening', () => {
   it('strips trailing markdown extensions from flattened path slugs', () => {

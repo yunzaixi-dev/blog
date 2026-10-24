@@ -17,8 +17,8 @@ const termRoutes: TermRoute[] = [
     navigationLabel: '分类',
     indexHeading: '全部分类',
     indexPath: '/zh/categories/',
-    detailVisibleHeading: '分类：折腾',
-    detailPath: '/zh/categories/%E6%8A%98%E8%85%BE/',
+    detailVisibleHeading: '分类：数据分析',
+    detailPath: '/zh/categories/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/',
   },
   {
     locale: 'zh',
@@ -26,26 +26,8 @@ const termRoutes: TermRoute[] = [
     navigationLabel: '标签',
     indexHeading: '全部标签',
     indexPath: '/zh/tags/',
-    detailVisibleHeading: '#Linux',
-    detailPath: '/zh/tags/linux/',
-  },
-  {
-    locale: 'en',
-    section: 'categories',
-    navigationLabel: 'Categories',
-    indexHeading: 'Categories',
-    indexPath: '/en/categories/',
-    detailVisibleHeading: 'Category: 折腾',
-    detailPath: '/en/categories/%E6%8A%98%E8%85%BE/',
-  },
-  {
-    locale: 'en',
-    section: 'tags',
-    navigationLabel: 'Tags',
-    indexHeading: 'Tags',
-    indexPath: '/en/tags/',
-    detailVisibleHeading: '#Linux',
-    detailPath: '/en/tags/linux/',
+    detailVisibleHeading: '#NodeSeek',
+    detailPath: '/zh/tags/nodeseek/',
   },
 ]
 
@@ -64,12 +46,6 @@ async function navigateFromPrimaryNavigation(page: Page, route: TermRoute) {
     .click()
 }
 
-function expectNoStreamingFallback(html: string) {
-  expect(html).not.toContain('id="B:0"')
-  expect(html).not.toContain('id="S:0"')
-  expect(html).not.toContain('animata-shimmer')
-}
-
 async function expectStableTermChip(page: Page, href: string) {
   const chip = page.locator(`main a[href="${decodeURI(href)}"]`).first()
   const box = await chip.boundingBox()
@@ -84,36 +60,16 @@ async function expectStableTermChip(page: Page, href: string) {
   expect(transitionProperty).toContain('color')
 }
 
-test.describe('term routes without JavaScript', () => {
-  test.use({ javaScriptEnabled: false })
-
-  for (const route of termRoutes) {
-    test(`${route.locale} ${route.section} index is present in the initial document`, async ({
-      page,
-    }) => {
-      const response = await page.goto(route.indexPath)
-
-      expect(response?.status()).toBe(200)
-      expectNoStreamingFallback((await response?.text()) || '')
-      await expect(page.getByRole('heading', { level: 1, name: route.indexHeading })).toBeVisible()
-      await expect(page.locator(`main a[href="${decodeURI(route.detailPath)}"]`)).toBeVisible()
-      await expect(page.locator('[class*="animata-shimmer"]')).toHaveCount(0)
-    })
-
-    test(`${route.locale} ${route.section} detail is present in the initial document`, async ({
-      page,
-    }) => {
-      const response = await page.goto(route.detailPath)
-
-      expect(response?.status()).toBe(200)
-      expectNoStreamingFallback((await response?.text()) || '')
-      await expect(
-        page.getByRole('heading', { level: 1, name: route.detailVisibleHeading })
-      ).toBeVisible()
-      await expect(page.locator('main [data-post-shell]').first()).toBeVisible()
-      await expect(page.locator('[class*="animata-shimmer"]')).toHaveCount(0)
-    })
-  }
+test('application shell explains its API content contract without JavaScript', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  const page = await context.newPage()
+  await page.goto(new URL('/zh/categories/', baseURL).href)
+  expect(await page.content()).toContain('通过 API 加载文章')
+  await expect(page.locator('main')).toHaveCount(0)
+  await context.close()
 })
 
 for (const route of termRoutes) {

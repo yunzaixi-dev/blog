@@ -26,7 +26,7 @@ import { readingFixtureHtml } from './reading-fixture.mjs'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const agentRecordsRoot = path.join(projectRoot, 'docs', 'agent-records')
-const defaultBaseUrl = 'http://127.0.0.1:3001'
+const defaultBaseUrl = 'http://127.0.0.1:45100'
 
 const viewportPresets = /** @type {Record<ViewportName, ViewportDefinition>} */ ({
   compact: { width: 320, height: 812, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
@@ -954,7 +954,7 @@ function alignmentFailures(row) {
       })
     }
     if (
-      row.route === '/zh/技术/making-memoh-cheaper-on-telegram/' &&
+      row.route === '/zh/AI/codex-cheap-claude-alt/' &&
       !row.fixture &&
       viewport.width >= ARTICLE_DESKTOP_TOC_BREAKPOINT &&
       row.textScale === 100
@@ -1471,6 +1471,13 @@ async function withPage(
       throw new Error(`${pathname} returned ${status}`)
     }
 
+    await page.locator('main h1').waitFor({ state: 'attached' })
+    if (
+      !pathname.includes('__ui_probe_missing__') &&
+      !/^\/(zh|en)\/(?:search|tags|categories)?\/?$/.test(pathname)
+    )
+      await page.locator('[data-article-body]').waitFor({ state: 'visible' })
+
     await ensureStableTheme(page, theme)
     await applyTextScale(page, textScale)
     await page.evaluate(() => document.fonts?.ready.then(() => undefined))
@@ -1634,7 +1641,7 @@ async function probeSearch(browser, baseUrl) {
     'compact',
     '/zh/search/',
     async (page) => {
-      await page.getByRole('searchbox').fill('小米')
+      await page.getByRole('searchbox').fill('NodeSeek')
       await page.locator('[data-search-result-card]').first().waitFor({ state: 'visible' })
 
       return {
@@ -1665,12 +1672,12 @@ async function probeSearch(browser, baseUrl) {
   )
 
   const { context, page, assertNoToolInitErrors } = await createPage(browser, 'light', 'compact')
-  await page.route('**/pagefind/pagefind.js', (route) => route.abort())
+  await page.route('**/api/search?*', (route) => route.abort())
 
   try {
     await page.goto(createUrl(baseUrl, '/zh/search/'), { waitUntil: 'load' })
     await ensureStableTheme(page, 'light')
-    await page.getByRole('searchbox').fill('小米')
+    await page.getByRole('searchbox').fill('NodeSeek')
     await page.locator('[data-search-results][data-search-state="error"]').waitFor()
     assertNoToolInitErrors()
 
@@ -1752,7 +1759,7 @@ async function probeOverflowMatrix(browser, baseUrl) {
     '/zh/search/',
     '/zh/categories/',
     '/zh/tags/',
-    '/zh/折腾/xiaomi-book-pro-14/',
+    '/zh/数据分析/nodeseek-post-types/',
   ]
   const viewports = /** @type {ViewportName[]} */ ([
     'compact',
@@ -1789,10 +1796,7 @@ async function probeOverflowMatrix(browser, baseUrl) {
  * @returns {Promise<unknown[]>}
  */
 async function probeReadingArticleTop(browser, baseUrl) {
-  const routes = [
-    { language: 'zh', path: '/zh/折腾/xiaomi-book-pro-14/' },
-    { language: 'en', path: '/en/折腾/xiaomi-book-pro-14/' },
-  ]
+  const routes = [{ language: 'zh', path: '/zh/数据分析/nodeseek-post-types/' }]
   const viewports = /** @type {ViewportName[]} */ ([
     'compact',
     'mobile',
@@ -1856,7 +1860,7 @@ async function probeReadingFixture(browser, baseUrl) {
           baseUrl,
           theme,
           viewportName,
-          '/zh/折腾/xiaomi-book-pro-14/',
+          '/zh/数据分析/nodeseek-post-types/',
           async (page, viewport) => {
             await injectReadingFixture(page)
 
@@ -1898,10 +1902,9 @@ async function probeReadingCoverage(browser, baseUrl) {
   const result = /** @type {Record<string, unknown>} */ ({})
 
   for (const [key, route] of [
-    ['zh', '/zh/折腾/xiaomi-book-pro-14/'],
-    ['en', '/en/折腾/xiaomi-book-pro-14/'],
-    ['rich', '/zh/技术/making-memoh-cheaper-on-telegram/'],
-    ['feature', '/zh/技术/blog-git-metadata-and-icons/'],
+    ['zh', '/zh/数据分析/nodeseek-post-types/'],
+    ['rich', '/zh/AI/codex-cheap-claude-alt/'],
+    ['feature', '/zh/工程/reliable-login/'],
   ]) {
     result[key] = await withPage(browser, baseUrl, 'dark', 'desktop', route, (page) =>
       articleCoverage(page)
@@ -1913,7 +1916,7 @@ async function probeReadingCoverage(browser, baseUrl) {
     baseUrl,
     'dark',
     'desktop',
-    '/zh/折腾/xiaomi-book-pro-14/',
+    '/zh/数据分析/nodeseek-post-types/',
     async (page) => {
       await injectReadingFixture(page)
       return articleCoverage(page)
@@ -1958,7 +1961,7 @@ async function probeReadingRichContent(browser, baseUrl) {
         baseUrl,
         /** @type {ThemeName} */ (scenario.theme),
         /** @type {ViewportName} */ (scenario.viewportName),
-        '/zh/技术/making-memoh-cheaper-on-telegram/',
+        '/zh/AI/codex-cheap-claude-alt/',
         async (page, viewport) => ({
           name: scenario.name,
           theme: scenario.theme,
@@ -1979,11 +1982,7 @@ async function probeReadingRichContent(browser, baseUrl) {
  * @returns {Promise<unknown[]>}
  */
 async function probeReadingTextScale200(browser, baseUrl) {
-  const routes = [
-    '/zh/折腾/xiaomi-book-pro-14/',
-    '/en/折腾/xiaomi-book-pro-14/',
-    '/zh/技术/making-memoh-cheaper-on-telegram/',
-  ]
+  const routes = ['/zh/数据分析/nodeseek-post-types/', '/zh/AI/codex-cheap-claude-alt/']
   const rows = []
 
   for (const route of routes) {
@@ -2030,11 +2029,10 @@ async function probeReadingTextScale200(browser, baseUrl) {
  */
 async function probeReadingAlignment(browser, baseUrl) {
   const routes = [
-    '/zh/折腾/xiaomi-book-pro-14/',
-    '/en/折腾/xiaomi-book-pro-14/',
-    '/zh/技术/making-memoh-cheaper-on-telegram/',
-    '/zh/折腾/kde-plasma-obsdian-web-clipper/',
-    '/zh/技术/blog-git-metadata-and-icons/',
+    '/zh/数据分析/nodeseek-post-types/',
+    '/zh/AI/codex-cheap-claude-alt/',
+    '/zh/数据分析/nodeseek-content-types/',
+    '/zh/工程/reliable-login/',
   ]
   const viewports = /** @type {ViewportName[]} */ ([
     'compact',
@@ -2074,12 +2072,12 @@ async function probeReadingAlignment(browser, baseUrl) {
           baseUrl,
           theme,
           viewportName,
-          '/zh/折腾/xiaomi-book-pro-14/',
+          '/zh/数据分析/nodeseek-post-types/',
           async (page, viewport) => {
             await injectReadingFixture(page)
 
             return {
-              route: '/zh/折腾/xiaomi-book-pro-14/',
+              route: '/zh/数据分析/nodeseek-post-types/',
               fixture: true,
               theme,
               textScale: 100,
@@ -2101,7 +2099,7 @@ async function probeReadingAlignment(browser, baseUrl) {
             baseUrl,
             theme,
             viewportName,
-            route === '__fixture__' ? '/zh/折腾/xiaomi-book-pro-14/' : route,
+            route === '__fixture__' ? '/zh/数据分析/nodeseek-post-types/' : route,
             async (page, viewport) => {
               const fixture = route === '__fixture__'
 
@@ -2110,7 +2108,7 @@ async function probeReadingAlignment(browser, baseUrl) {
               }
 
               return {
-                route: fixture ? '/zh/折腾/xiaomi-book-pro-14/' : route,
+                route: fixture ? '/zh/数据分析/nodeseek-post-types/' : route,
                 fixture,
                 theme,
                 textScale: 200,
@@ -2164,6 +2162,36 @@ async function probeReadingMax(browser, baseUrl) {
   }
 }
 
+/** @param {Browser} browser @param {string} baseUrl */
+async function probeEnglishEmptySite(browser, baseUrl) {
+  const pages = []
+  for (const route of ['/en/', '/en/categories/', '/en/tags/', '/en/search/']) {
+    pages.push(
+      await withPage(browser, baseUrl, 'dark', 'mobile', route, async (page) => {
+        if (route.endsWith('/search/')) {
+          await page.getByRole('searchbox').fill('NodeSeek')
+          await page.locator('[data-search-state="empty"]').waitFor()
+        }
+        return {
+          route,
+          lang: await page.locator('html').getAttribute('lang'),
+          heading: await page.locator('main h1').innerText(),
+          postCount: await page.locator('[data-post-shell]').count(),
+          termCount: await page.locator('[data-term-chip]').count(),
+          searchState: (await page.locator('[data-search-state]').count())
+            ? await page.locator('[data-search-state]').getAttribute('data-search-state')
+            : null,
+        }
+      })
+    )
+  }
+  return {
+    articleCoverage:
+      'No published English articles; reading metrics cover real Chinese articles only',
+    pages,
+  }
+}
+
 async function main() {
   const rawArgs = process.argv.slice(2)
   const baseUrl = normalizeBaseUrl(readArg(rawArgs, '--base-url') || defaultBaseUrl)
@@ -2189,6 +2217,7 @@ async function main() {
       notFound: await probeNotFound(browser, baseUrl),
       overflowMatrix: await probeOverflowMatrix(browser, baseUrl),
       readingMax: await probeReadingMax(browser, baseUrl),
+      englishEmptySite: await probeEnglishEmptySite(browser, baseUrl),
       readingAlignment: await probeReadingAlignment(browser, baseUrl),
     }
 

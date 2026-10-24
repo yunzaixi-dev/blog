@@ -1,5 +1,3 @@
-'use client'
-
 import { AnimatePresence, motion } from 'motion/react'
 import { type CSSProperties, useState } from 'react'
 import ContentTree from '@/components/ContentTree'

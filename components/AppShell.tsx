@@ -1,6 +1,4 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { useTheme } from 'next-themes'
 import { useReducedMotion } from 'motion/react'
 import { Toaster } from 'sonner'
@@ -116,6 +114,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     idleArticleSurfaceVeilState
   )
   const [cardSequence, setCardSequence] = useState<ArticleTransitionSequence | null>(null)
+  const [cardSession, setCardSession] = useState(0)
   const [hideHeaderOnMobile, setHideHeaderOnMobile] = useState(false)
   const previousScrollYRef = useRef(0)
   const mainRef = useRef<HTMLElement>(null)
@@ -244,6 +243,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }
 
       dispatchVeil({ type: 'cancelled' })
+      setCardSession((session) => session + 1)
       dispatchTransition({
         type: 'open-started',
         snapshot: intent.snapshot,
@@ -647,6 +647,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </a>
         <Header hideOnMobile={isReadingPost && hideHeaderOnMobile} />
         <ArticleCardTransitionOverlay
+          key={cardSession}
           state={transitionState}
           onSequenceChange={setCardSequence}
           onUnderlayReady={flushPendingReturnBack}

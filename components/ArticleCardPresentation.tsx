@@ -13,7 +13,7 @@ export const articleCardPresentationClasses = {
   git: `mb-3 space-y-2 text-[0.8125rem] leading-5 sm:mb-4 sm:text-sm sm:leading-6 ${mutedText}`,
   gitRow: 'flex flex-wrap items-start gap-x-3 gap-y-1.5 sm:gap-x-4 sm:gap-y-2',
   summary:
-    'mb-4 block line-clamp-2 text-[0.95rem] leading-6 text-slate-600 sm:mb-5 sm:text-base sm:leading-7 dark:text-white/75',
+    'mb-4 line-clamp-2 text-[0.95rem] leading-6 text-slate-600 sm:mb-5 sm:text-base sm:leading-7 dark:text-white/75',
   footer: `flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.8125rem] sm:gap-x-4 sm:gap-y-3 sm:text-sm ${mutedText}`,
   footerMeta: 'flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3',
   readMoreSlot: 'ml-auto inline-flex items-center',

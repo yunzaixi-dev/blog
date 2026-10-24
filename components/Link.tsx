@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-has-content */
 import { AnchorHTMLAttributes } from 'react'
-import NextLink from 'next/link'
+import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
 
 function isStaticAssetPath(href: string) {
@@ -9,7 +9,9 @@ function isStaticAssetPath(href: string) {
     href === '/robots.txt' ||
     href === '/sitemap.xml' ||
     href.startsWith('/static/') ||
-    href.startsWith('/_next/')
+    href.startsWith('/assets/') ||
+    href.startsWith('/export/') ||
+    /\.[a-z0-9]+(?:[?#]|$)/i.test(href)
   )
 }
 
@@ -23,8 +25,8 @@ const CustomLink = ({
   const isAnchorLink = href && href.startsWith('#')
   const linkClassName = cn('break-words', className)
 
-  if (isInternalLink && !isStaticAssetPath(href)) {
-    return <NextLink className={linkClassName} href={href} replace={replace} {...rest} />
+  if (isInternalLink && !href.startsWith('//') && !rest.download && !isStaticAssetPath(href)) {
+    return <Link className={linkClassName} to={href} replace={replace} {...rest} />
   }
 
   if (isInternalLink || isAnchorLink) {

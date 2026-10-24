@@ -1,5 +1,3 @@
-'use client'
-
 import { motion } from 'motion/react'
 import {
   ARTICLE_SURFACE_VEIL_DURATION_SECONDS,

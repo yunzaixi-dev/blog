@@ -22,7 +22,7 @@
 
 **后果**：脚本质量和静态产物体积有了可复现的门禁；两者至今仍是提交前的必跑项。
 
-## ADR-0003 移除浏览器端 MDX 求值
+## ADR-0003 移除浏览器端 MDX 求值（实现由 ADR-0019 取代）
 
 日期：2026-06-23
 
@@ -52,7 +52,7 @@
 
 **后果**：动效有了统一所有者。但其中"文章作为列表卡片展开"的所有权模型随后被证明有结构性缺陷，由 ADR-0007 重新决策。Motion 与 Animata 组件仍保留，只用于 ADR-0007/0008 允许的有界动效。
 
-## ADR-0006 采用 Pagefind 静态搜索
+## ADR-0006 采用 Pagefind 静态搜索（已被 ADR-0019 取代）
 
 日期：2026-07-04
 
@@ -93,7 +93,7 @@
 
 **后果**：完整卡片有连贯的视觉引导，直达/刷新/无脚本路径完全不受影响；搜索和侧栏来源使用单篇 skeleton 快照。转场合同细节见 [architecture.md](./architecture.md#文章卡片转场)。
 
-## ADR-0009 稳定根布局与本地服务器一致性
+## ADR-0009 稳定根布局与本地服务器一致性（框架实现由 ADR-0019 取代）
 
 日期：2026-07-10 之后
 
@@ -138,7 +138,7 @@
 - 采用 remark-math 解析 `$$` 公式语法，rehype-mathjax（`rehype-mathjax/svg` 子路径）在构建期把公式渲染成内联 SVG。渲染引擎是 mathjax-full（MathJax v3，Apache-2.0，10,889 stars，2026-08-03 查询）。
 - 用户明确否决 KaTeX，选择 MathJax。
 - remark-math / rehype-mathjax 来自 remarkjs/remark-math monorepo（MIT，514 stars），低于 1,000 stars 门槛；豁免理由：unified collective 官方数学插件，生态内无替代品，渲染引擎本身达标。用户已知悉并接受。
-- remark-math 配置 `singleDollarTextMath: false`：仓库有 `$AAPL` ticker shortcode（remarkTradingViewWidgets）和 `$0.0028` 这类货币文本，不禁用单 `$` 会被误解析为行内公式；行内公式改用同一行内的 `$$...$$` 书写。
+- 勘误（2026-10-24）：实际配置是 `singleDollarTextMath: true`，支持 `$formula$` 行内公式；历史记录误写 false。孤立 ticker 由后续 TradingView 插件处理。
 - 选 SVG 输出而非 CHTML：零 CSS、零字体文件、零资产预算影响，SVG 用 `currentColor` 跟随明暗主题。
 - 插件顺序：rehype-mathjax 必须排在 rehype-pretty-code 之前（math 插件整体替换 `language-math` 节点，pretty-code 会把渲染产物当代码破坏）。
 
@@ -267,3 +267,30 @@
 - husky pre-push 从 `pnpm verify` 改为 `pnpm check`：e2e 套件依赖原站的示例文章（小米笔记本、折腾分类等），一次运行超过 20 分钟且必然失败；改写为本站内容之前，e2e 手动运行。
 
 **后果**：上线时间取决于一次 `pnpm build`（本地约 26 秒）与增量上传；检查失败需要人工关注 Actions 结果。X 文章没有公开的草稿 API，导出依赖粘贴富文本和手动插图。仓库连接 Sengi 项目前，CI job 会一直排队。
+
+## ADR-0019 静态 React 壳与运行时 Go 内容 API
+
+日期：2026-10-24
+
+**背景**：用户要求移除 Next.js，并明确文章内容必须通过 API 加载，更新文章无需 CI/CD、应用构建或重启。此前候选的 React Router Framework prerender 和逐文章模块方案被用户纠正，不采用。
+
+**决策**：
+
+- 采用 React 19.2.4、Vite 7.3.1 与普通 React Router 7.18.4 data router。Vite 仅构建应用壳和固定组件，文章正文、列表数据、搜索语料不进入 HTML 正文或前端 bundle。稳定 AppShell、动画、主题与无障碍沿用现有组件。
+- Go 标准库实际承担 `/api/page?path=...`、`/api/search`、RSS/sitemap/robots/export、历史 redirects、安全静态媒体和动态 head。page 响应投影来自一次 immutable snapshot；未知内容 404，非法参数 400，坏内容 503，不静默旧缓存。
+- 内容与媒体独立持久挂载。每次内容请求比较文件完整字节发现新增/修改/草稿/删除；构建完成后锁内整体发布。修复坏内容后下一请求恢复，不定时轮询、不只看 mtime/size。
+- Go 管理一个 Node stdio worker，不开第三端口；复用 gray-matter、remark/rehype、Shiki、MathJax、GitHub embeds、ECharts、TradingView、StrategyCard。新增 remark-mdx 3.1.1 只解析语法，输出白名单 JSON 树；不执行作者 JS，不编译/求值 MDX module。props 只接受静态字面量、数组对象和负数，拒绝调用/import/export/spread/事件/危险键与 URL。
+- 依赖门槛证据（planner 于本次选型实查 GitHub）：vitejs/vite 83,485 stars、remix-run/react-router 56,622 stars、mdx-js/mdx 19,830 stars（remark-mdx 所在仓库），均超过 1,000。官方参考：vite.dev/guide/、reactrouter.com/start/data/installation、mdxjs.com/packages/remark-mdx/。
+- Go 动态注入 title/lang/canonical/OG/Twitter/hreflang/JSON-LD；正文经 API。无 JS 显示说明并保留 Markdown export，不再承诺旧静态正文合同。ADR-0007 的独立文章路由、来源证明与返回所有权保留；其无脚本正文及 Next 滚动实现由本条替代。ADR-0008/0017 的视觉状态机保留。
+- 运行时页面/API/feed/sitemap/export `no-store`；哈希 assets 一年 immutable，可变媒体一小时 must-revalidate；Go 提供 HEAD/304/Range、dotfile/symlink 防护、无目录列表。TLS/HSTS/压缩由可信反向代理承担。
+- 开发严格前端 45100、Go 45101，preview 直接使用 Go；CI 产出带 worker 依赖的应用 artifact，停止 Pages-only 自动直传。内容与媒体变更不触发应用 CI。生产明确依赖 Node，不声称单 Go 二进制。
+
+**后果**：内容与应用发布解耦，保留丰富排版与交互能力；首次请求和内容变更需要服务端解析，浏览器正文依赖 API 与 JavaScript。运行时热更新、失败恢复、浏览器返回/滚动及开发预览一致性均需直接测试证据。历史 ADR 的框架、部署和静态正文描述作为历史保留，当前合同以本条和 architecture.md 为准。
+
+### ADR-0019 修订：安全 YAML、离线元信息与 WebP 预算
+
+日期：2026-10-24
+
+frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言引擎分派；BOM/CRLF 先规范化，拒绝语言声明。公开查询无论 NODE_ENV 都排除草稿。Git 历史默认只读本地，缺失时使用 frontmatter 时间与源文件链接；远端富化必须显式设置 GIT_HISTORY_REMOTE=1，不再让默认冷启动与文章更新依赖网络。
+
+用户授权 WebP 有损压缩与适度缩尺寸以满足原 2 MB 图片门禁。图表维持分辨率以保留标签；插画/照片最多 1400px。转换原图保存在 Git 历史，不双份发布；旧 PNG/JPEG URL 以 \_redirects 中的明确 301 规则兼容，新 .webp URL 的正确 MIME、Range/HEAD 和安全根目录检查继续生效。SITE_URL 的应用端为构建配置，worker 端为进程启动配置，部署应保持一致。

@@ -1,7 +1,13 @@
-import { allAuthors, allBlogs } from 'contentlayer/generated'
-import type { Authors, Blog } from 'contentlayer/generated'
+import type { Authors, Blog } from '@/lib/content/types'
+let allAuthors: Authors[] = []
+let allBlogs: Blog[] = []
+
+export function setContent(blogs: Blog[], authors: Authors[]) {
+  allBlogs = blogs
+  allAuthors = authors
+}
 import { getPostLocale, getPostsByLocale, isPublishedPost } from '@/lib/blog'
-import { coreContent, sortPosts, type CoreContent } from '@/lib/contentlayer'
+import { coreContent, sortPosts, type CoreContent } from '@/lib/content/core'
 import { defaultLocale, locales, type Locale } from '@/lib/i18n'
 import { toListPosts, toPostNavItem, type BlogListPost } from '@/lib/listPosts'
 import { normalizeTocHeadings } from '@/lib/toc'

@@ -1,5 +1,3 @@
-'use client'
-
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import BackToTop from '@/components/BackToTop'
@@ -9,8 +7,10 @@ import type { ContentTreeNode } from '@/lib/content/contentTree'
 import { getCategoryCounts, getTagCounts, type CountMap } from '@/lib/content/terms'
 import { defaultLocale, localeConfig, type Locale, ui } from '@/lib/i18n'
 import type { BlogListPost } from '@/lib/listPosts'
+import { useLocation } from 'react-router'
 
 const POSTS_PER_BATCH = 5
+const listVisibleCounts = new Map<string, number>()
 
 interface ListLayoutProps {
   posts: BlogListPost[]
@@ -31,7 +31,10 @@ export default function ListLayoutWithTags({
   categoryCounts: providedCategoryCounts,
   tagCounts: providedTagCounts,
 }: ListLayoutProps) {
-  const [visibleCount, setVisibleCount] = useState(POSTS_PER_BATCH)
+  const location = useLocation()
+  const [visibleCount, setVisibleCount] = useState(
+    () => listVisibleCounts.get(location.key) || POSTS_PER_BATCH
+  )
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
   const labels = ui[locale]
@@ -43,8 +46,12 @@ export default function ListLayoutWithTags({
   const heading = visibleTitle || title
 
   const loadMorePosts = useCallback(() => {
-    setVisibleCount((count) => Math.min(count + POSTS_PER_BATCH, posts.length))
-  }, [posts.length])
+    setVisibleCount((count) => {
+      const next = Math.min(count + POSTS_PER_BATCH, posts.length)
+      listVisibleCounts.set(location.key, next)
+      return next
+    })
+  }, [location.key, posts.length])
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: shouldReduceMotion ? 'auto' : 'smooth' })

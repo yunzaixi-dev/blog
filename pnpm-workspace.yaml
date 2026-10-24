@@ -1,8 +1,5 @@
 # Which dependencies may run install scripts (pnpm blocks them by default).
 # sharp ships prebuilt binaries; its script only retries a source build.
 allowBuilds:
-  contentlayer2: true
   esbuild: true
-  unrs-resolver: true
-  protobufjs: false
   sharp: false

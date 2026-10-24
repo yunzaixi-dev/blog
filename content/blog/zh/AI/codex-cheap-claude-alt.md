@@ -1,9 +1,9 @@
 ---
-title: "今晚 Codex 速度还可以，可以当 Claude 廉价替代了（就只是廉价替代）"
+title: '今晚 Codex 速度还可以，可以当 Claude 廉价替代了（就只是廉价替代）'
 date: 2026-10-18T02:20:00+08:00
-summary: "一次 Codex 请求的实测数据：首字 4.88 秒，输出 45.8 tok/s，花了 3.5 美分。够用，但也就是廉价替代。"
-categories: ["AI"]
-tags: ["Codex", "Claude", "AI 工具", "实测"]
+summary: '一次 Codex 请求的实测数据：首字 4.88 秒，输出 45.8 tok/s，花了 3.5 美分。够用，但也就是廉价替代。'
+categories: ['AI']
+tags: ['Codex', 'Claude', 'AI 工具', '实测']
 language: zh
 authors: ['default']
 ---
@@ -14,17 +14,17 @@ authors: ['default']
 
 下面是我在自己的网关面板上看到的一次请求，不是跑分，只是随手一条：
 
-| 项目 | 数值 |
-| --- | --- |
-| 输入 token | 4,324 |
-| 输出 token | 1,183 |
-| 缓存 token | 140.5K |
-| 费用 | $0.034532 |
-| 首字延迟 | 4.88 s |
-| 总耗时 | 25.85 s |
-| 输出速度 | 45.8 tok/s |
+| 项目       | 数值       |
+| ---------- | ---------- |
+| 输入 token | 4,324      |
+| 输出 token | 1,183      |
+| 缓存 token | 140.5K     |
+| 费用       | $0.034532  |
+| 首字延迟   | 4.88 s     |
+| 总耗时     | 25.85 s    |
+| 输出速度   | 45.8 tok/s |
 
-![一次 Codex 请求在网关面板上的 token、费用和延迟](/static/images/codex-cheap-claude-alt/panel.jpg)
+![一次 Codex 请求在网关面板上的 token、费用和延迟](/static/images/codex-cheap-claude-alt/panel.webp)
 
 ## 怎么看这组数字
 

@@ -1,7 +1,7 @@
 # zaixi.dev 博客常用命令（go-task v3）
 # 安装 task: https://taskfile.dev/installation/  或
 #   curl -fsSL https://taskfile.dev/install.sh | sh
-# 依赖: Node.js 22 + pnpm（构建）、ffmpeg（视频转 WebP）、python3（Pages 直传）、wl-copy（导出到剪贴板）
+# 依赖: Node.js 24 + pnpm + Go 1.26（服务与构建）、ffmpeg（视频转 WebP）、wl-copy（导出到剪贴板）
 # 列出全部任务: task --list
 version: "3"
 
@@ -25,18 +25,18 @@ tasks:
       - pnpm install
 
   serve:
-    desc: 本地开发预览（热更新，http://localhost:3001）
+    desc: 本地开发预览（热更新，http://127.0.0.1:45100）
     aliases: [dev]
     cmds:
       - pnpm dev
 
   build:
-    desc: 构建静态站点（输出到 out/）
+    desc: 构建 React 壳和 Go/worker 交付包
     cmds:
       - pnpm build
 
   preview:
-    desc: 构建并用 Caddy 预览静态产物（与线上行为一致）
+    desc: 构建并用 Go 预览（运行时 API）
     cmds:
       - pnpm preview
 
@@ -77,7 +77,7 @@ tasks:
         echo "配图放到 public/static/images/{{.SLUG}}/，然后运行 task images"
 
   images:
-    desc: 为 public/static/images 下新加的 JPG/PNG 生成多尺寸 WebP 和尺寸清单
+    desc: 优化 public/static/images 下 JPG/PNG，并检查图片尺寸
     cmds:
       - pnpm images:optimize
 
@@ -165,23 +165,8 @@ tasks:
         echo "已拷贝 → $dest"
         echo "论坛 Markdown: ![说明](https://zaixi.dev/forum/$(basename "$dest"))"
 
-  # --- 部署（需 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID）---
-  # 日常推送走 GitHub Actions（Sengi runner）；本地直传用于不想等 CI 的时候。
-
-  deploy-dev:
-    desc: 本地构建并直传到 dev.zaixi.dev（需 Cloudflare 环境变量）
-    cmds:
-      - NEXT_PUBLIC_SITE_URL=https://dev.zaixi.dev NEXT_PUBLIC_NOINDEX=true pnpm build
-      - "printf '\\n/*\\n  X-Robots-Tag: noindex\\n' >> out/_headers"
-      - python3 scripts/pages_deploy.py out {{.PROJECT}} dev
-
-  deploy-prod:
-    desc: 本地构建并直传到 zaixi.dev 正式站（慎用；一般合并 main 即可）
+  package:
+    desc: 构建运行时交付包；内容目录单独挂载
     cmds:
       - pnpm build
-      - python3 scripts/pages_deploy.py out {{.PROJECT}} main
-
-  deploy:fast:
-    desc: 从 box 直传 Cloudflare Pages（BRANCH=main|dev|both，默认 both），不等 Actions
-    cmds:
-      - scripts/fast-deploy.sh {{.BRANCH | default "both"}}
+      - tar -czf blog-runtime.tar.gz dist out node_modules package.json

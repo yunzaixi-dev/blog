@@ -1,7 +1,5 @@
-'use client'
-
 import { useTheme } from 'next-themes'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { EChartsCoreOption, EChartsType } from 'echarts/core'
 import { getLocaleFromPathname, ui } from '@/lib/i18n'

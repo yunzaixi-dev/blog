@@ -16,9 +16,9 @@ import { readingFixtureHtml } from './reading-fixture.mjs'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const agentRecordsRoot = path.join(projectRoot, 'docs', 'agent-records')
-const defaultBaseUrl = 'http://127.0.0.1:3001'
+const defaultBaseUrl = 'http://127.0.0.1:45100'
 const defaultLocale = 'zh'
-const defaultArticleSlug = '折腾/xiaomi-book-pro-14'
+const defaultArticleSlug = '数据分析/nodeseek-post-types'
 const defaultPageKeys = /** @type {PageKey[]} */ ([
   'home',
   'article',
@@ -286,8 +286,16 @@ function createPageDefinitions(locale, articlePath) {
     'search-error': { key: 'search-error', path: `/${locale}/search/` },
     categories: { key: 'categories', path: `/${locale}/categories/` },
     tags: { key: 'tags', path: `/${locale}/tags/` },
-    'category-term': { key: 'category-term', path: `/${locale}/categories/折腾/` },
-    'tag-term': { key: 'tag-term', path: `/${locale}/tags/linux/` },
+    'category-term': {
+      key: 'category-term',
+      path: `/${locale}/categories/数据分析/`,
+      expectedStatus: locale === 'en' ? 404 : 200,
+    },
+    'tag-term': {
+      key: 'tag-term',
+      path: `/${locale}/tags/nodeseek/`,
+      expectedStatus: locale === 'en' ? 404 : 200,
+    },
     404: { key: '404', path: `/${locale}/__ui_screenshot_missing__/`, expectedStatus: 404 },
   }
 }
@@ -299,7 +307,7 @@ function createPageDefinitions(locale, articlePath) {
  */
 async function waitForReady(page, key) {
   if (key === 'home') {
-    await page.locator('[data-post-shell]').first().waitFor({ state: 'visible' })
+    await page.locator('main h1').waitFor({ state: 'visible' })
   } else if (key.startsWith('article') || key === 'markdown-fixture') {
     await page.locator('[data-article-body]').waitFor({ state: 'visible' })
   } else if (key.startsWith('search')) {
@@ -307,7 +315,7 @@ async function waitForReady(page, key) {
   } else if (key === 'categories' || key === 'tags') {
     await page.getByRole('heading', { level: 1 }).waitFor({ state: 'visible' })
   } else if (key === 'category-term' || key === 'tag-term') {
-    await page.locator('[data-post-shell]').first().waitFor({ state: 'visible' })
+    await page.locator('main h1').waitFor({ state: 'visible' })
   } else {
     await page.locator('[data-not-found-code]').waitFor({ state: 'visible' })
   }
@@ -453,10 +461,10 @@ async function injectReadingFixture(page) {
  * @returns {Promise<void>}
  */
 async function configurePageBeforeNavigation(page, key) {
-  await page.unroute('**/pagefind/pagefind.js').catch(() => undefined)
+  await page.unroute('**/api/search?*').catch(() => undefined)
 
   if (key === 'search-error') {
-    await page.route('**/pagefind/pagefind.js', (route) => route.abort())
+    await page.route('**/api/search?*', (route) => route.abort())
   }
 }
 
@@ -477,6 +485,10 @@ async function prepareSearchCapture(page, key, options) {
   await searchbox.fill(query)
 
   if (key === 'search-results') {
+    if (new URL(page.url()).pathname.startsWith('/en/')) {
+      await page.locator('[data-search-results][data-search-state="empty"]').waitFor()
+      return
+    }
     const firstResult = page.locator('[data-search-result-card]').first()
     await firstResult.waitFor({ state: 'visible' })
     await waitForElementAnimations(firstResult)
@@ -637,12 +649,12 @@ async function main() {
   const rawArgs = process.argv.slice(2)
   const label = sanitizeLabel(readArg(rawArgs, '--label') || 'manual')
   const locale = readArg(rawArgs, '--locale') || defaultLocale
-  const articlePath = readArg(rawArgs, '--article-path') || `/${locale}/${defaultArticleSlug}/`
+  const articlePath = readArg(rawArgs, '--article-path') || `/zh/${defaultArticleSlug}/`
   const baseUrl = normalizeBaseUrl(readArg(rawArgs, '--base-url') || defaultBaseUrl)
   const fullPage = rawArgs.includes('--full-page')
   const selector = readArg(rawArgs, '--selector')
   const scrollToSelector = readArg(rawArgs, '--scroll-to')
-  const searchQuery = readArg(rawArgs, '--search-query') || '小米'
+  const searchQuery = readArg(rawArgs, '--search-query') || 'NodeSeek'
   const emptyQuery = readArg(rawArgs, '--empty-query') || 'zzzxxyqnohit260804'
   const textScale = parseTextScale(readArg(rawArgs, '--text-scale'))
   const outputDir =

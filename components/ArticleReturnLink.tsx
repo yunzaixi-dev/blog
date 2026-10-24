@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { useArticleTransitionReturn } from '@/components/ArticleTransitionContext'
 import Link from '@/components/Link'

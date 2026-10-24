@@ -1,15 +1,16 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const HOME_PATH = '/zh/'
 // Non-ASCII topic folders: page.url() is percent-encoded, while rendered href /
 // data-* attributes keep the raw form. See article-reading.spec.ts.
-const ARTICLE_HREF = '/zh/折腾/xiaomi-book-pro-14/'
+const ARTICLE_HREF = '/zh/数据分析/nodeseek-post-types/'
 const ARTICLE_PATH = encodeURI(ARTICLE_HREF)
-// data-post-shell stores the contentlayer path (no leading/trailing slash).
-const ARTICLE_CARD_KEY = 'zh/折腾/xiaomi-book-pro-14'
-const RICH_ARTICLE_HREF = '/zh/技术/making-memoh-cheaper-on-telegram/'
+// data-post-shell stores the content path (no leading/trailing slash).
+const ARTICLE_CARD_KEY = 'zh/数据分析/nodeseek-post-types'
+const RICH_ARTICLE_HREF = '/zh/AI/codex-cheap-claude-alt/'
 const RICH_ARTICLE_PATH = encodeURI(RICH_ARTICLE_HREF)
-const OLD_ARTICLE_PATH = '/zh/xiaomi-book-pro-14/'
+const OLD_ARTICLE_PATH = '/posts/nodeseek-post-types/'
 
 type SwitchReturnProbe = {
   removedAt: number | null
@@ -172,9 +173,11 @@ test('list pages keep a date-sorted center and an unlabeled tree on the right', 
   const sorted = [...dates].sort((left, right) => right.localeCompare(left))
   expect(dates).toEqual(sorted)
 
-  const folder = tree.getByRole('button', { name: '折腾' })
+  const folder = tree.getByRole('button', { name: '数据分析' })
   await expect(folder).toHaveAttribute('aria-expanded', 'true')
-  await expect(tree.locator('a[data-content-tree-post="折腾/xiaomi-book-pro-14"]')).toBeVisible()
+  await expect(
+    tree.locator('a[data-content-tree-post="数据分析/nodeseek-post-types"]')
+  ).toBeVisible()
 
   await folder.click()
   await expect(folder).toHaveAttribute('aria-expanded', 'false')
@@ -190,10 +193,9 @@ test('article pages use a three-column tree rail at 1024px and hide it below', a
   await expect(page.locator('.article-toc-desktop')).toBeVisible()
   await expect(page.locator('[data-article-surface]')).toBeVisible()
   await expect(tree).toBeVisible()
-  await expect(tree.locator('a[data-content-tree-post="折腾/xiaomi-book-pro-14"]')).toHaveAttribute(
-    'aria-current',
-    'page'
-  )
+  await expect(
+    tree.locator('a[data-content-tree-post="数据分析/nodeseek-post-types"]')
+  ).toHaveAttribute('aria-current', 'page')
 
   await page.setViewportSize({ width: 1023, height: 900 })
   await expect(page.locator('[data-article-content-tree]')).toBeHidden()
@@ -214,9 +216,7 @@ test('list tree post links open the article with a structured tree overlay', asy
     .toBeGreaterThan(0)
   await expect(page.locator('[data-article-transition-overlay]')).toHaveCount(0)
   await expect(page).toHaveURL(ARTICLE_PATH)
-  await expect(page.locator('[data-article-body]')).toContainText(
-    '入手这台 Xiaomi Book Pro 14 的理由其实挺简单'
-  )
+  await expect(page.locator('[data-article-body]')).toContainText('同一份公开列表数据')
 })
 
 test('tree overlay shows source chrome during hold and does not replay collapsible enter', async ({
@@ -230,10 +230,14 @@ test('tree overlay shows source chrome during hold and does not replay collapsib
     releaseArticleRequest = resolve
   })
 
-  await page.route(`**${ARTICLE_PATH}index.txt*`, async (route) => {
-    await articleRequestReleased
-    await route.continue()
-  })
+  await page.route(
+    (url) =>
+      url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(ARTICLE_PATH),
+    async (route) => {
+      await articleRequestReleased
+      await route.continue()
+    }
+  )
 
   await page.goto(HOME_PATH)
 
@@ -251,12 +255,12 @@ test('tree overlay shows source chrome during hold and does not replay collapsib
     await expect(sourceTree).toHaveAttribute('data-content-tree-flight', 'true')
     await expect(overlay.locator('[data-animata-collapsible]')).toHaveCount(0)
     await expect(sourceTree.locator('[data-content-tree-open="true"]')).not.toHaveCount(0)
-    await expect(sourceTree.locator('[data-content-tree-folder="折腾"]')).toHaveAttribute(
+    await expect(sourceTree.locator('[data-content-tree-folder="数据分析"]')).toHaveAttribute(
       'data-content-tree-open',
       'true'
     )
     await expect(
-      sourceTree.locator('[data-content-tree-post="折腾/xiaomi-book-pro-14"]')
+      sourceTree.locator('[data-content-tree-post="数据分析/nodeseek-post-types"]')
     ).toBeVisible()
 
     const box = await overlay.boundingBox()
@@ -352,10 +356,14 @@ test('article tree switches fade the reading surface without moving TOC or tree'
     releaseArticleRequest = resolve
   })
 
-  await page.route(`**${RICH_ARTICLE_PATH}index.txt*`, async (route) => {
-    await articleRequestReleased
-    await route.continue()
-  })
+  await page.route(
+    (url) =>
+      url.pathname === '/api/page' && url.searchParams.get('path') === decodeURI(RICH_ARTICLE_PATH),
+    async (route) => {
+      await articleRequestReleased
+      await route.continue()
+    }
+  )
 
   await page.goto(ARTICLE_PATH)
 
@@ -538,17 +546,15 @@ test('old flat article URLs permanently redirect to topic folders', async ({ req
 test.describe('no-js content tree', () => {
   test.use({ javaScriptEnabled: false })
 
-  test('renders open folders and post leaves in static HTML', async ({ page }) => {
+  test('keeps content tree out of static HTML and explains the API requirement', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(HOME_PATH)
 
     const tree = page.locator('.blog-sidebar-right [data-content-tree]')
-    await expect(tree).toBeVisible()
-    await expect(tree.getByRole('button', { name: '折腾' })).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    )
-    await expect(tree.locator('a[data-content-tree-post="折腾/xiaomi-book-pro-14"]')).toBeVisible()
+    await expect(tree).toHaveCount(0)
+    expect(await page.content()).toContain('通过 API 加载文章')
     await expect(page.locator('body')).not.toContainText('文件夹')
   })
 })

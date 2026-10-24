@@ -1,5 +1,3 @@
-'use client'
-
 import { ThemeProvider } from 'next-themes'
 import { MotionConfig } from 'motion/react'
 import siteMetadata from '@/data/siteMetadata'

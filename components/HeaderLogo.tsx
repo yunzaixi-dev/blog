@@ -1,6 +1,4 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import siteMetadata from '@/data/siteMetadata'
 import Link from './Link'
 import Image from './Image'
@@ -18,7 +16,7 @@ const HeaderLogo = () => {
     >
       <div className="flex items-center justify-between gap-3">
         <Image
-          src="/static/images/avatar.jpg"
+          src="/static/images/avatar.webp"
           width={36}
           height={36}
           alt=""

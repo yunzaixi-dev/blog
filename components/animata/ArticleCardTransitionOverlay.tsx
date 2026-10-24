@@ -1,6 +1,3 @@
-'use client'
-
-/* eslint-disable @next/next/no-img-element -- The inert transition snapshot reuses the already-loaded runtime currentSrc; it is not content or an LCP image. */
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { getArticleCardPresentationClasses } from '@/components/ArticleCardPresentation'

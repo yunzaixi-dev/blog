@@ -1,5 +1,3 @@
-'use client'
-
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'

@@ -68,12 +68,8 @@ type TranslationMember = {
   path: string
 }
 
-const translationGroups = new Map<string, TranslationMember[]>()
-
 function getTranslationGroups() {
-  if (translationGroups.size > 0) {
-    return translationGroups
-  }
+  const translationGroups = new Map<string, TranslationMember[]>()
 
   for (const post of getPublishedSitemapPosts()) {
     const key = post.translationKey || post.slug

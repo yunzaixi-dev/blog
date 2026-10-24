@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const port = Number(process.env.PLAYWRIGHT_PORT || 3011)
-const devPort = Number(process.env.PLAYWRIGHT_DEV_PORT || 3010)
+const port = Number(process.env.PLAYWRIGHT_PORT || 45100)
+const devPort = Number(process.env.PLAYWRIGHT_DEV_PORT || 45100)
 const devPreviewParity = process.env.PLAYWRIGHT_DEV_PREVIEW_PARITY === '1'
 
 export default defineConfig({
@@ -17,20 +17,24 @@ export default defineConfig({
   webServer: devPreviewParity
     ? [
         {
-          command: `pnpm preview --no-build --port ${port}`,
+          command: `node scripts/preview-static.mjs --no-build --port ${port}`,
+          gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
           url: `http://127.0.0.1:${port}/zh/`,
           reuseExistingServer: !process.env.CI,
           timeout: 60_000,
         },
         {
-          command: `cross-env NODE_ENV=development INIT_CWD=$PWD next dev --port ${devPort}`,
+          command: 'node scripts/dev.mjs',
+          env: { DEV_PORT: String(devPort), API_PORT: String(devPort + 1) },
+          gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
           url: `http://127.0.0.1:${devPort}/zh/`,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: false,
           timeout: 180_000,
         },
       ]
     : {
-        command: `pnpm preview --port ${port}`,
+        command: `node scripts/preview-static.mjs --no-build --port ${port}`,
+        gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
         url: `http://127.0.0.1:${port}/zh/`,
         reuseExistingServer: !process.env.CI,
         timeout: 180_000,

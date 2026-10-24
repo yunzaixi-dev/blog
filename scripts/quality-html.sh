@@ -84,7 +84,7 @@ analyze_html() {
 if [ -d "$TARGET" ]; then
   while IFS= read -r -d '' file; do
     analyze_html "$file"
-  done < <(find "$TARGET" \( -name "*.html" -o -name "*.htm" \) -not -path "*/pagefind/*" -print0)
+  done < <(find "$TARGET" \( -name "*.html" -o -name "*.htm" \) -print0)
 elif [ -f "$TARGET" ]; then
   analyze_html "$TARGET"
 else
@@ -119,10 +119,12 @@ jq -n \
   --argjson warning_total "$warning_total" \
   --argjson max "$MAX_FINDINGS" \
   '{
-    success: true,
+    success: ($issue_total == 0),
     issues: $issues,
     warnings: $warnings,
     issueCount: $issue_total,
     warningCount: $warning_total,
     truncated: (($issue_total > $max) or ($warning_total > $max))
   }'
+
+[ "$issue_total" -eq 0 ]

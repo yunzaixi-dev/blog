@@ -1,7 +1,5 @@
-'use client'
-
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import Link from './Link'
 import {
   getLocaleFromPathname,
@@ -57,7 +55,7 @@ const LanguageSwitcher = () => {
         href={getLanguageHref(pathname, otherLocale, hasAlternate)}
         data-language-switcher-mobile
         data-animata-language-switcher-active
-        className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-[8px] border border-slate-200 bg-slate-100 px-3 text-sm font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 motion-safe:transition-[border-color,color,background-color] motion-safe:duration-150 motion-safe:ease-out lg:hidden dark:border-white/10 dark:bg-white/[0.08] dark:text-white/80 dark:hover:border-sky-700 dark:hover:bg-sky-900/[0.24] dark:hover:text-sky-300"
+        className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-[8px] border border-slate-200 bg-slate-100 px-3 text-sm font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 lg:hidden dark:border-white/10 dark:bg-white/[0.08] dark:text-white/80 dark:hover:border-sky-700 dark:hover:bg-sky-900/[0.24] dark:hover:text-sky-300"
       >
         {localeConfig[otherLocale].label}
       </Link>

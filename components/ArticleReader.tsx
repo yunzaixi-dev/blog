@@ -1,5 +1,3 @@
-'use client'
-
 import { useRef, type MouseEvent, type ReactNode } from 'react'
 import ReadingProgress from '@/components/ReadingProgress'
 import { getSameDocumentFragmentId } from '@/lib/articleFragment'
