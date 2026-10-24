@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getRepoSourceFilePathCandidates } from '../../contentlayer/config/gitHistory'
+import { getRepoSourceFilePathCandidates } from '../../content-pipeline/gitHistory'
 
 describe('git history path candidates', () => {
   it('keeps the current topic path and the retired flat blog path', () => {

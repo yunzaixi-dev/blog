@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect } from 'react'
 import { ARTICLE_RETURN_MARKER_KEY, createArticleReturnMarker } from '@/lib/articleReturn'
 import {

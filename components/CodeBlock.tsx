@@ -1,7 +1,5 @@
-'use client'
-
 import { useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { Check, Copy } from 'lucide-react'
 import { siGithub } from 'simple-icons'
 import { toast } from 'sonner'

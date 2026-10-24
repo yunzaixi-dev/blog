@@ -1,39 +1,41 @@
 # zaixi.dev
 
-纯粹的技术博客。Next.js App Router + Contentlayer + Tailwind CSS 静态导出，部署在 Cloudflare Pages。
+纯粹的技术博客。React 19 + Vite 静态应用壳，React Router 处理浏览器导航；Go 提供运行时页面、搜索、RSS、sitemap 和 Markdown export API，并管理一个不监听端口的私有 Node 内容解析 worker。
 
-- `main` → https://zaixi.dev/
-- `dev` → https://dev.zaixi.dev/（禁止索引）
+**更新文章不需要构建、CI/CD 或重启。** 把 Markdown 与图片写入服务挂载的 `content/`、`public/` 目录，下次请求就会读到完整的新快照。文章正文不写进应用 HTML 或前端 bundle；无 JavaScript 时显示说明，Markdown 可通过 `/export/zh/<分类>/<slug>.md` 阅读。
 
-推送后由 GitHub Actions 在 [Sengi](https://sengi.run) runner 上构建，`scripts/pages_deploy.py` 只上传变化的文件。
+## 开发与预览
 
-## 常用命令
-
-需要 Node.js 22、pnpm 和 [go-task](https://taskfile.dev/installation/)。
+需要 Node.js 24+、pnpm 11 和 Go 1.26+。可选安装 [go-task](https://taskfile.dev/installation/)。
 
 ```bash
-task install                      # 安装依赖
-task serve                        # 开发预览 http://localhost:3001
-task new-post SLUG=my-post CATEGORY=工程 TITLE="标题"
-task images                       # 加了配图后生成多尺寸 WebP
-task build                        # 构建到 out/
-task check                        # 全部检查（CI 同款）
-
-task export:list                  # 可导出的文章
-task export:forum SLUG=my-post    # 论坛 Markdown（图片为完整 URL）→ 剪贴板
-task export:x SLUG=my-post        # X 文章富文本 → 剪贴板，图片 → ~/Downloads/x-export/<slug>/
-
-task webp IN=clip.mp4             # 视频 → 论坛动态 WebP（public/forum/）
-task deploy:fast                  # 不等 CI，从 box 直传
+pnpm install
+pnpm dev                         # Vite 45100，Go 45101；端口占用即失败
+pnpm build                       # out/ 应用壳、dist/blog、dist/worker/
+pnpm preview --no-build --port 45100
+pnpm content:generate            # 可选内容校验，不是发布步骤
+pnpm check
+pnpm test:runtime
+pnpm test:e2e
+pnpm test:e2e:parity
+pnpm perf:check
 ```
 
-论坛 Markdown 也随站点发布在 `https://zaixi.dev/export/zh/<分类>/<slug>.md`，手机上也能直接复制。
+## 写作与转发
 
-## 文档
+```bash
+task new-post SLUG=my-post CATEGORY=工程 TITLE="标题"
+pnpm images:optimize
+pnpm export forum my-post
+pnpm export x my-post
+task webp IN=clip.mp4
+```
+
+CI 只验证并提供运行时 artifact，不自动发布到远端。内容与媒体独立持久挂载，部署命令见 [部署文档](docs/deployment.md)。
 
 - [软件架构](docs/architecture.md)
-- [部署](docs/deployment.md)
-- [本地开发](docs/development.md)
+- [内容与安全 MDX](docs/content.md)
+- [本地开发与门禁](docs/development.md)
 - [架构决策记录](docs/decisions.md)
 
 ## 致谢

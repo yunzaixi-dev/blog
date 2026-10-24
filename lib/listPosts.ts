@@ -1,4 +1,4 @@
-import type { Blog } from 'contentlayer/generated'
+import type { Blog } from '@/lib/content/types'
 
 export type BlogListPost = Pick<
   Blog,

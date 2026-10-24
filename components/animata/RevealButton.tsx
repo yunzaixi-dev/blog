@@ -1,5 +1,3 @@
-'use client'
-
 import { motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
 import { animataDuration, animataEase } from '@/components/animata/motion'
 import { cn } from '@/lib/utils'

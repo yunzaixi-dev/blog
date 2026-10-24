@@ -1,5 +1,3 @@
-'use client'
-
 import { useId, useState } from 'react'
 import {
   getArticleCardPresentationClasses,
@@ -52,7 +50,7 @@ export default function ArticleGitMeta({
   }
 
   return (
-    <div className={classes.git} data-pagefind-ignore="all">
+    <div className={classes.git}>
       {showOverview && hasOverview && (
         <div className={classes.gitRow}>
           {updatedAt && (

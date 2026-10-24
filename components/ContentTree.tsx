@@ -1,5 +1,3 @@
-'use client'
-
 import { useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import CollapsiblePanel from '@/components/animata/CollapsiblePanel'

@@ -22,7 +22,7 @@
 
 **后果**：脚本质量和静态产物体积有了可复现的门禁；两者至今仍是提交前的必跑项。
 
-## ADR-0003 移除浏览器端 MDX 求值
+## ADR-0003 移除浏览器端 MDX 求值（实现由 ADR-0019 取代）
 
 日期：2026-06-23
 
@@ -52,7 +52,7 @@
 
 **后果**：动效有了统一所有者。但其中"文章作为列表卡片展开"的所有权模型随后被证明有结构性缺陷，由 ADR-0007 重新决策。Motion 与 Animata 组件仍保留，只用于 ADR-0007/0008 允许的有界动效。
 
-## ADR-0006 采用 Pagefind 静态搜索
+## ADR-0006 采用 Pagefind 静态搜索（已被 ADR-0019 取代）
 
 日期：2026-07-04
 
@@ -93,7 +93,7 @@
 
 **后果**：完整卡片有连贯的视觉引导，直达/刷新/无脚本路径完全不受影响；搜索和侧栏来源使用单篇 skeleton 快照。转场合同细节见 [architecture.md](./architecture.md#文章卡片转场)。
 
-## ADR-0009 稳定根布局与本地服务器一致性
+## ADR-0009 稳定根布局与本地服务器一致性（框架实现由 ADR-0019 取代）
 
 日期：2026-07-10 之后
 
@@ -138,7 +138,7 @@
 - 采用 remark-math 解析 `$$` 公式语法，rehype-mathjax（`rehype-mathjax/svg` 子路径）在构建期把公式渲染成内联 SVG。渲染引擎是 mathjax-full（MathJax v3，Apache-2.0，10,889 stars，2026-08-03 查询）。
 - 用户明确否决 KaTeX，选择 MathJax。
 - remark-math / rehype-mathjax 来自 remarkjs/remark-math monorepo（MIT，514 stars），低于 1,000 stars 门槛；豁免理由：unified collective 官方数学插件，生态内无替代品，渲染引擎本身达标。用户已知悉并接受。
-- remark-math 配置 `singleDollarTextMath: false`：仓库有 `$AAPL` ticker shortcode（remarkTradingViewWidgets）和 `$0.0028` 这类货币文本，不禁用单 `$` 会被误解析为行内公式；行内公式改用同一行内的 `$$...$$` 书写。
+- 勘误（2026-10-24）：实际配置是 `singleDollarTextMath: true`，支持 `$formula$` 行内公式；历史记录误写 false。孤立 ticker 由后续 TradingView 插件处理。
 - 选 SVG 输出而非 CHTML：零 CSS、零字体文件、零资产预算影响，SVG 用 `currentColor` 跟随明暗主题。
 - 插件顺序：rehype-mathjax 必须排在 rehype-pretty-code 之前（math 插件整体替换 `language-math` 节点，pretty-code 会把渲染产物当代码破坏）。
 
@@ -267,3 +267,72 @@
 - husky pre-push 从 `pnpm verify` 改为 `pnpm check`：e2e 套件依赖原站的示例文章（小米笔记本、折腾分类等），一次运行超过 20 分钟且必然失败；改写为本站内容之前，e2e 手动运行。
 
 **后果**：上线时间取决于一次 `pnpm build`（本地约 26 秒）与增量上传；检查失败需要人工关注 Actions 结果。X 文章没有公开的草稿 API，导出依赖粘贴富文本和手动插图。仓库连接 Sengi 项目前，CI job 会一直排队。
+
+## ADR-0019 静态 React 壳与运行时 Go 内容 API
+
+日期：2026-10-24
+
+**背景**：用户要求移除 Next.js，并明确文章内容必须通过 API 加载，更新文章无需 CI/CD、应用构建或重启。此前候选的 React Router Framework prerender 和逐文章模块方案被用户纠正，不采用。
+
+**决策**：
+
+- 采用 React 19.2.4、Vite 7.3.1 与普通 React Router 7.18.4 data router。Vite 仅构建应用壳和固定组件，文章正文、列表数据、搜索语料不进入 HTML 正文或前端 bundle。稳定 AppShell、动画、主题与无障碍沿用现有组件。
+- Go 标准库实际承担 `/api/page?path=...`、`/api/search`、RSS/sitemap/robots/export、历史 redirects、安全静态媒体和动态 head。page 响应投影来自一次 immutable snapshot；未知内容 404，非法参数 400，坏内容 503，不静默旧缓存。
+- 内容与媒体独立持久挂载。每次内容请求比较文件完整字节发现新增/修改/草稿/删除；构建完成后锁内整体发布。修复坏内容后下一请求恢复，不定时轮询、不只看 mtime/size。
+- Go 管理一个 Node stdio worker，不开第三端口；复用 gray-matter、remark/rehype、Shiki、MathJax、GitHub embeds、ECharts、TradingView、StrategyCard。新增 remark-mdx 3.1.1 只解析语法，输出白名单 JSON 树；不执行作者 JS，不编译/求值 MDX module。props 只接受静态字面量、数组对象和负数，拒绝调用/import/export/spread/事件/危险键与 URL。
+- 依赖门槛证据（planner 于本次选型实查 GitHub）：vitejs/vite 83,485 stars、remix-run/react-router 56,622 stars、mdx-js/mdx 19,830 stars（remark-mdx 所在仓库），均超过 1,000。官方参考：vite.dev/guide/、reactrouter.com/start/data/installation、mdxjs.com/packages/remark-mdx/。
+- Go 动态注入 title/lang/canonical/OG/Twitter/hreflang/JSON-LD；正文经 API。无 JS 显示说明并保留 Markdown export，不再承诺旧静态正文合同。ADR-0007 的独立文章路由、来源证明与返回所有权保留；其无脚本正文及 Next 滚动实现由本条替代。ADR-0008/0017 的视觉状态机保留。
+- 运行时页面/API/feed/sitemap/export `no-store`；哈希 assets 一年 immutable，可变媒体一小时 must-revalidate；Go 提供 HEAD/304/Range、dotfile/symlink 防护、无目录列表。TLS/HSTS/压缩由可信反向代理承担。
+- 开发严格前端 45100、Go 45101，preview 直接使用 Go；CI 产出带 worker 依赖的应用 artifact，停止 Pages-only 自动直传。内容与媒体变更不触发应用 CI。生产明确依赖 Node，不声称单 Go 二进制。
+
+**后果**：内容与应用发布解耦，保留丰富排版与交互能力；首次请求和内容变更需要服务端解析，浏览器正文依赖 API 与 JavaScript。运行时热更新、失败恢复、浏览器返回/滚动及开发预览一致性均需直接测试证据。历史 ADR 的框架、部署和静态正文描述作为历史保留，当前合同以本条和 architecture.md 为准。
+
+### ADR-0019 修订：安全 YAML、离线元信息与 WebP 预算
+
+日期：2026-10-24
+
+frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言引擎分派；BOM/CRLF 先规范化，拒绝语言声明。公开查询无论 NODE_ENV 都排除草稿。Git 历史默认只读本地，缺失时使用 frontmatter 时间与源文件链接；远端富化必须显式设置 GIT_HISTORY_REMOTE=1，不再让默认冷启动与文章更新依赖网络。
+
+用户授权 WebP 有损压缩与适度缩尺寸以满足原 2 MB 图片门禁。图表维持分辨率以保留标签；插画/照片最多 1400px。转换原图保存在 Git 历史，不双份发布；旧 PNG/JPEG URL 以 \_redirects 中的明确 301 规则兼容，新 .webp URL 的正确 MIME、Range/HEAD 和安全根目录检查继续生效。SITE_URL 的应用端为构建配置，worker 端为进程启动配置，部署应保持一致。
+
+## ADR-0020 Sengi 构建镜像，Flux 管理应用发布
+
+日期：2026-10-24
+
+**背景**：ADR-0019 的本地运行时 artifact 尚未提供集群发布入口。用户指定沿用 Sengi CI/CD 与现有 Flux，文章发布不得触发镜像构建或 Pod rollout。
+
+**决策**：应用流水线在 Sengi 双核 runner 上运行完整门禁、四核 runner 上用官方 Docker Buildx action 构建并 smoke 实际容器。PR 不发布；main 或显式指定完整提交 SHA 的手动运行在成功后推送 GHCR，输出不可变 digest 供 Flux 清单固定。验证和构建 job 只读且不保留 checkout 凭据；GitHub job token 的 packages 写权限仅授予独立 publish job，后者从 artifact 加载已 smoke 的镜像，不 checkout、执行源码或重新构建。CI 不持有 Kubernetes 凭据、不直接部署。内容与文章媒体保持独立挂载，内容专用变更不启动应用流水线。
+
+**后果**：回滚依据是提交 SHA 与镜像 digest，不是可变 latest；镜像必须先完成真实容器 smoke 才能推送。内容同步和公网流量切换仍分别由内容发布链及现有边缘入口负责，镜像发布成功不等于公网发布完成。
+
+### ADR-0020 修订：git-sync 原子 checkout 与独立持久内容
+
+采用 kubernetes/git-sync v4.8.0（planner 实查 2,741 GitHub stars；官方合同见 https://github.com/kubernetes/git-sync/tree/v4.8.0），固定 OCI digest。原生 Kubernetes sidecar 首次同步成功后才启动 blog；30 秒同步 main，submodules off，旧 worktree 保留 10 分钟。共享 Retain PVC，内容专用 push 不经过应用 CI 和 rollout。
+
+初期的 API 每请求文件快照方案已由下述 PostgreSQL 发布合同替代；`--checkout-root` 仅供 importer 固定来源。storage 由 prune=false、deletionPolicy=Orphan 的独立 Flux 协调持有，app dependsOn storage。入口复用现有 Envoy/CrowdSec/cloudflared，Git 管理 API 子域 HTTPRoute、ReferenceGrant 与 NetworkPolicy；远程 tunnel 与 DNS 操作不由 CI 执行。
+
+### ADR-0020 修订：Pages 前端与 API 子域
+
+按用户最终部署边界，zaixi.dev 保留 Cloudflare Pages 静态壳，api.zaixi.dev 承载 Go/Node 内容服务。Sengi 分别上传现有 Pages 项目与 GHCR 镜像，Flux 只协调集群后端。前端 API_BASE_URL 统一 page/search，Go 精确 CORS 白名单不开放浏览器凭据；动态媒体字段转为后端 URL，页面链接保持 Pages。Pages 的客户端路由 fallback 返回壳 200，404 由 API 表达；静态壳不再承诺服务端动态 SEO。发文仍经 Git 独立同步，不触发 CI/build/rollout。
+
+## ADR-0021 PostgreSQL 发布权威、Typesense 搜索与 R2 媒体
+
+日期：2026-10-24
+
+**决策**：按用户要求使用现有 CNPG app-db 的独立 blog 库。不可变 releases 存储公开 JSON snapshot、collection 映射与 media manifest，publication.active_revision 是唯一公开切版点。独立 importer 固定 Git SHA、持 session advisory lock，安全 Node stdio parser 生成公开投影，R2 上传不可变 release 对象，Typesense 完成双语索引并核对逐行结果及 count，最终单个 PG 事务发布。API reader 不启动 parser，不扫描 Git、不内存搜索。同步和导入失败继续服务最后 committed active；没有 active、PG/Typesense 读取失败才 503。R2 使用已建立公开域名，不新增私有代理或 Pages Functions。
+
+依赖证据由 planner 本次核实：pgx 14,352 stars、AWS SDK Go 3,670 stars、Typesense 27,035 stars、SeaweedFS 35,710 stars，均超过 1,000 门槛。最初采用的 MinIO 已 archived，且实际 Sengi 匿名拉取失败，官方 Quay 镜像也无可用 manifest；本地和 CI 改用官方 `chrislusf/seaweedfs:4.17` 的固定 digest、mini S3 模式和独立卷。使用独立测试凭据，写权限限测试 bucket；保留 `minio` 服务 DNS 供既有本地入口兼容，旧 MinIO 卷不删除或复用。生产 R2 仍通过官方 AWS SDK Go v2 访问。部署和发布协议见 [publication.md](./publication.md)。
+
+**后果**：导入失败不发布半版，旧索引保留避免并发清理；草稿和删除经新 release 从正文/索引消失，已公开 R2 对象不承诺密码学撤回。应用发布采用镜像与 Pages 两阶段显式门控，后端真实就绪后才允许 Pages 手动发布同 SHA。
+
+## ADR-0022 本地 devcontainer 完整验证与极简云端交付
+
+日期：2026-10-24（取代 ADR-0020 中云端运行完整门禁的安排）
+
+**背景**：用户要求耗时高的测试全部在本地完成，云端 CI/CD 保持极简。宿主 PingFang 与 Linux 容器字体曾造成同一版本布局检查结果不同，宿主单独通过不足以建立发布证据。
+
+**决策**：`pnpm verify:local` 作为统一完整门禁，使用隔离 devcontainer 项目与全新依赖卷执行代码、浏览器、集成和性能检查；运行时镜像检查由宿主 Docker 编排，不向 app 挂载 Docker socket。pre-push 对应用变更调用完整入口，纯内容变更继续独立导入。云端仅构建 Pages、实际镜像、执行轻量容器 smoke 并发布同一已 smoke 镜像，保持只读构建与独立 packages 写权限，Pages 仍在后端就绪后显式发布。云端不重复重测试，不把本地报告当作密码学证明。
+
+用户同时要求不再默认启动子代理：当前 agent 顺序完成 planner、implementer、reviewer 职责，复用有效证据，但确定性门禁及失败处理标准不减。
+
+**后果**：本地需要 Docker 和容器依赖下载，验证会增加本地 push 耗时；云端耗时集中在必要构建。字体差异导致的两项原布局断言保持不变，正文 gutter 下限改为 16px、移动卡片只收紧留白，不缩正文和目标尺寸。修改测试策略不会把既有失败变成通过，仍须完整本地验收。

@@ -1,0 +1,20 @@
+{
+  "identities": [
+    {
+      "name": "blog-local-only",
+      "credentials": [
+        {
+          "accessKey": "blog-local-only",
+          "secretKey": "blog-local-secret-only"
+        }
+      ],
+      "actions": [
+        "Admin:blog-test-media",
+        "Read:blog-test-media",
+        "Write:blog-test-media",
+        "List:blog-test-media",
+        "Tagging:blog-test-media"
+      ]
+    }
+  ]
+}

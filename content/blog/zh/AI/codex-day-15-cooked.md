@@ -2,8 +2,8 @@
 title: "Codex 第 15 天：OpenAI 在 cooking，Tibo 说 we're cooked"
 date: 2026-10-20T03:55:00+08:00
 summary: "OpenAI Developers 发了一场 Codex 直播，Codex 团队的 Tibo 转发时只写了一句：Day 15 / We're cooked。"
-categories: ["AI"]
-tags: ["Codex", "OpenAI", "AI 工具", "随笔"]
+categories: ['AI']
+tags: ['Codex', 'OpenAI', 'AI 工具', '随笔']
 language: zh
 authors: ['default']
 ---
@@ -18,7 +18,7 @@ authors: ['default']
 
 > Day 15/ We're cooked
 
-![Tibo: Day 15/ We're cooked](/static/images/codex-day-15-cooked/tibo.jpg)
+![Tibo: Day 15/ We're cooked](/static/images/codex-day-15-cooked/tibo.webp)
 
 北京时间 10 月 20 日 3:45 发的，我截图的时候已经 4.9 万次浏览、400 多条回复。
 

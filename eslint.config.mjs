@@ -14,7 +14,7 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   {
-    ignores: ['next-env.d.ts'],
+    ignores: ['build/**', 'out/**', '.react-router/**', '.cache/**'],
     linterOptions: {
       reportUnusedDisableDirectives: 'error',
       reportUnusedInlineConfigs: 'error',
@@ -25,8 +25,6 @@ const eslintConfig = [
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jsx-a11y/recommended',
-    'next',
-    'next/core-web-vitals',
     'prettier'
   ),
   {
@@ -52,8 +50,6 @@ const eslintConfig = [
     },
 
     rules: {
-      'react/react-in-jsx-scope': 'off',
-
       'jsx-a11y/anchor-is-valid': [
         'error',
         {
@@ -62,10 +58,8 @@ const eslintConfig = [
           aspects: ['invalidHref', 'preferButton'],
         },
       ],
-      'react/prop-types': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'error',
-      'react/no-unescaped-entities': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/ban-ts-comment': [
         'error',

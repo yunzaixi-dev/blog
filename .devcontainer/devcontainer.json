@@ -1,0 +1,19 @@
+{
+  "name": "Blog full stack",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/blog",
+  "remoteUser": "node",
+  "shutdownAction": "stopCompose",
+  "initializeCommand": "chmod a+r .devcontainer/s3-local.json",
+  "postCreateCommand": "pnpm install --offline --frozen-lockfile && node --version && go version && pnpm --version",
+  "forwardPorts": [45100, 45101, 45102, 45103, 45104, 45105],
+  "portsAttributes": {
+    "45100": { "label": "React" },
+    "45101": { "label": "Go API" },
+    "45102": { "label": "PostgreSQL" },
+    "45103": { "label": "Typesense" },
+    "45104": { "label": "Local S3" },
+    "45105": { "label": "SeaweedFS Admin UI" }
+  }
+}

@@ -1,4 +1,4 @@
-export const defaultPreviewPort = '3001'
+export const defaultPreviewPort = '45100'
 
 /**
  * @param {string[]} args - raw argument list
@@ -19,15 +19,17 @@ export function readArg(args, name) {
 /**
  * @param {string[]} rawArgs - raw argument list
  * @param {NodeJS.ProcessEnv} [env] - environment variables
- * @returns {{ args: string[], port: string, skipBuild: boolean, updateCaddy: boolean }}
+ * @returns {{ args: string[], port: string, skipBuild: boolean }}
  */
 export function parsePreviewArgs(rawArgs, env = process.env) {
   const args = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs
+  const port = readArg(args, '--port') || env.PORT || defaultPreviewPort
+  if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535)
+    throw new Error('Invalid preview port')
 
   return {
     args,
-    port: readArg(args, '--port') || env.PORT || defaultPreviewPort,
+    port,
     skipBuild: args.includes('--no-build'),
-    updateCaddy: args.includes('--update-caddy'),
   }
 }

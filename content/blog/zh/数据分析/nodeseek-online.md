@@ -1,9 +1,9 @@
 ---
-title: "NodeSeek 各时段活跃度与在线人数估算"
+title: 'NodeSeek 各时段活跃度与在线人数估算'
 date: 2026-10-17T01:26:00+08:00
-summary: "用 4.5 万帖的公开浏览数，按发帖时段估算 NodeSeek 一天里谁在线、高峰在哪；附方法、局限与三张图。"
-categories: ["数据分析"]
-tags: ["数据分析", "NodeSeek", "爬虫"]
+summary: '用 4.5 万帖的公开浏览数，按发帖时段估算 NodeSeek 一天里谁在线、高峰在哪；附方法、局限与三张图。'
+categories: ['数据分析']
+tags: ['数据分析', 'NodeSeek', '爬虫']
 language: zh
 authors: ['default']
 ---
@@ -20,11 +20,11 @@ NodeSeek 没有公开的实时在线人数。列表页却有每帖浏览数，�
 
 没用「每帖平均浏览」当主指标：夜里竞争少，单帖浏览反而更高，会把低谷抬起来。用的是各发帖时段新帖（满 24h）浏览数之和、再按天平均。
 
-![各发帖时段新帖总浏览量](/static/images/nodeseek-online/02_final_views_by_post_hour.png)
+![各发帖时段新帖总浏览量](/static/images/nodeseek-online/02_final_views_by_post_hour.webp)
 
 发帖量本身也跟着走同一套节奏：
 
-![各小时发帖量](/static/images/nodeseek-online/01_posts_per_hour.png)
+![各小时发帖量](/static/images/nodeseek-online/01_posts_per_hour.webp)
 
 全站新帖日均约 2,200 条；这些新帖带来的浏览日均约 88 万次（按发帖满 24h 统计）。
 
@@ -32,13 +32,13 @@ NodeSeek 没有公开的实时在线人数。列表页却有每帖浏览数，�
 
 同时在线读帖人数 ≈ 每小时浏览量 × 每次浏览占用时长。每小时浏览量用上面的「新帖总浏览量」作代理；占用时长假设 1～4 分钟（中间值 2 分钟）。
 
-| 时段 | 中间值（2 分钟） | 区间（1～4 分钟） |
-| --- | --- | --- |
-| 14～16 点高峰 | 约 1,900 | 约 1,000～3,800 |
-| 凌晨 4 点 | 约 140 | 约 70～280 |
-| 全天平均 | 约 1,200 | — |
+| 时段          | 中间值（2 分钟） | 区间（1～4 分钟） |
+| ------------- | ---------------- | ----------------- |
+| 14～16 点高峰 | 约 1,900         | 约 1,000～3,800   |
+| 凌晨 4 点     | 约 140           | 约 70～280        |
+| 全天平均      | 约 1,200         | —                 |
 
-![在线人数粗估（峰值归一）](/static/images/nodeseek-online/05a_online_estimate_static.png)
+![在线人数粗估（峰值归一）](/static/images/nodeseek-online/05a_online_estimate_static.webp)
 
 粗略校验：实测 00:30～01:00 前 100 页帖子的浏览增量约 22.3k 次/小时，静态代理在 1 点的值约 23.8k，量级一致——但只有这一个时点。
 
@@ -50,7 +50,7 @@ NodeSeek 没有公开的实时在线人数。列表页却有每帖浏览数，�
 
 周末新帖总浏览量约为工作日的 **83%**（约 145k vs 174k/天），周末发帖约为工作日的 **77%**。周末白天（9～17 点）明显低于工作日；晚上 18～23 点与工作日持平甚至略高；周末凌晨 0～1 点发帖更少。
 
-![工作日对比周末](/static/images/nodeseek-online/07_weekday_weekend.png)
+![工作日对比周末](/static/images/nodeseek-online/07_weekday_weekend.webp)
 
 ## 局限
 

@@ -1,7 +1,7 @@
 @import 'tailwindcss';
+@import './prism.css';
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&:where(.dark, .dark *));
-@import './prism.css';
 
 /* Core theme configuration */
 @theme {
@@ -929,7 +929,7 @@
   }
 
   .article-reading-surface {
-    --article-gutter: clamp(1.25rem, 5vw, 2.5rem);
+    --article-gutter: clamp(1rem, 5vw, 2.5rem);
     --article-rail-max: var(--article-rail-max-en, 49rem);
     --article-rail-width: min(calc(100% - (var(--article-gutter) * 2)), var(--article-rail-max));
     --article-scroll-edge-bg: white;

@@ -11,7 +11,7 @@ type BlogLike = {
 }
 
 export function isPublishedPost(post: BlogLike) {
-  return process.env.NODE_ENV !== 'production' || post.draft !== true
+  return post.draft !== true
 }
 
 export function getPostLocale(post: Pick<BlogLike, 'locale' | 'language'>): Locale {

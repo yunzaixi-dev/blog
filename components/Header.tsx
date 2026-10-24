@@ -1,7 +1,5 @@
-'use client'
-
 import { useEffect, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import SlideHeader from '@/components/animata/SlideHeader'
 import HeaderLogo from './HeaderLogo'
 import HeaderNavLinks from './HeaderNavLinks'

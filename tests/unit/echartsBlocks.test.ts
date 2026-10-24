@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { remarkEChartsBlocks } from '../../contentlayer/config/remark/echartsBlocks'
-import type { MdastNode } from '../../contentlayer/config/types'
+import { remarkEChartsBlocks } from '../../content-pipeline/remark/echartsBlocks'
+import type { MdastNode } from '../../content-pipeline/types'
 
 function createTree(children: MdastNode[]): MdastNode {
   return { type: 'root', children }

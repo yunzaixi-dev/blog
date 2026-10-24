@@ -1,5 +1,3 @@
-'use client'
-
 import { motion, useReducedMotion, useScroll, useSpring } from 'motion/react'
 import type { RefObject } from 'react'
 

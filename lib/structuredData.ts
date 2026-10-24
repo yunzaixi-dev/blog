@@ -1,5 +1,5 @@
-import type { Authors, Blog } from 'contentlayer/generated'
-import type { CoreContent } from '@/lib/contentlayer'
+import type { Authors, Blog } from '@/lib/content/types'
+import type { CoreContent } from '@/lib/content/core'
 import siteMetadata from '@/data/siteMetadata'
 import { localeConfig, type Locale } from '@/lib/i18n'
 import type { BlogListPost } from '@/lib/listPosts'

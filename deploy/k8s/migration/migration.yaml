@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: blog-schema-v1
+  namespace: blog
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      containers:
+        - name: migrate
+          image: ${BLOG_IMAGE}
+          command: [/app/dist/blog]
+          args: [--mode=migrate]
+          envFrom:
+            - secretRef: {name: blog-migration}
+          env:
+            - {name: PGSSLROOTCERT, value: /etc/blog-db/ca.crt}
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: db-ca, mountPath: /etc/blog-db, readOnly: true}
+      volumes:
+        - name: db-ca
+          configMap:
+            name: blog-db-ca
+            items:
+              - {key: ca.crt, path: ca.crt}

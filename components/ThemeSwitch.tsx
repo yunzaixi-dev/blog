@@ -1,7 +1,5 @@
-'use client'
-
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { useTheme } from 'next-themes'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Moon, Sun } from 'lucide-react'

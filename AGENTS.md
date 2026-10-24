@@ -10,7 +10,7 @@
 
 流程：`planner → implementer → reviewer`。reviewer 返回 blocker 时由 implementer 修复后重新评审，最多 2 轮；仍不通过则停止并报告 blocker。
 
-有 subagent 工具时必须用 subagent 执行各角色；没有时说明工具限制并在本地按同样顺序执行。
+默认由当前 agent 按相同顺序完成规划、实现和自审，不自动启动子代理。只有用户明确要求时才委派，确定性门禁不因执行角色合并而减少。
 
 ## 核心规则
 
@@ -22,6 +22,8 @@
 ## 确定性门禁
 
 按 diff 范围运行存在的命令；命令不存在时报告 `NOT_AVAILABLE`，不得当作通过。
+
+完整应用交付使用 `pnpm verify:local`：在独立 devcontainer 项目中运行以下门禁及浏览器、集成、性能检查；宿主只调度 Docker 与实际运行时镜像检查。不要以宿主字体环境的通过替代容器内浏览器证据。云端仅构建、轻量 smoke 与发布，不重复重测试。应用 push hook 自动调用该入口，纯内容 push 不构建应用。
 
 ```bash
 git status --short && git diff --name-only && git diff --stat && git diff --check

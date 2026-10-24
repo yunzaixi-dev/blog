@@ -1,35 +1,27 @@
 # 内容与 MDX
 
-文章使用 MDX 编写，构建时由 Contentlayer 转换为类型化数据。
+文章在挂载目录中使用 Markdown 与安全 MDX 编写，由 Go 管理的私有 Node worker 在运行时转换为类型化投影与白名单 JSON 树。更新后下次 API 请求可见，无需应用构建或重启。
 
 ## 文章位置
 
 中文文章按主题子目录存放，文件名仍是 slug 的最后一段：
 
 ```text
-content/blog/zh/折腾/xiaomi-book-pro-14.md
-content/blog/zh/技术/making-memoh-cheaper-on-telegram.md
+content/blog/zh/数据分析/nodeseek-online.md
+content/blog/zh/AI/codex-cheap-claude-alt.md
 ```
 
-英文文章同样嵌套：
+英文文章同样嵌套（当前没有英文文章，以下仅为路径示例）：
 
 ```text
-content/blog/en/折腾/xiaomi-book-pro-14.md
+content/blog/en/数据分析/nodeseek-online.md
 ```
 
 根目录平铺文件仍然可用，但新文章应放进主题文件夹。`pnpm write-blog create --folder 折腾` 会写入 `content/blog/{locale}/{folder}/{slug}.md`。
 
 Obsidian 通过仓库外的 vault 符号链接编辑同一棵目录，不把 vault 文件提交进 Git：
 
-```bash
-
-```
-
-Templater 模板在 vault 的 `99_Resources/Templater/Blog.md`。slug 只使用不含扩展名的 basename：`pnpm write-blog`、Templater 和 Contentlayer `blogSlug` 都会去掉末尾误带的 `.md` / `.mdx`，Templater 创建笔记时不得再把 `.md` 写进文件名，以免生成 `post.md.md`。已存在的双后缀文件仍映射到不含扩展名的公开 URL，不要靠改文件名来“修复”未提交草稿。可选的本机插件符号链接：
-
-```bash
-
-```
+Templater 模板在 vault 的 `99_Resources/Templater/Blog.md`。slug 只使用不含扩展名的 basename：`pnpm write-blog`、Templater 和 内容管线 `blogSlug` 都会去掉末尾误带的 `.md` / `.mdx`，Templater 创建笔记时不得再把 `.md` 写进文件名，以免生成 `post.md.md`。已存在的双后缀文件仍映射到不含扩展名的公开 URL，不要靠改文件名来“修复”未提交草稿。
 
 作者信息：
 
@@ -75,7 +67,7 @@ draft: false
 | `translationKey` | 否   | 多语言文章的关联键           |
 | `authors`        | 否   | 作者 ID 列表                 |
 | `image`          | 否   | 文章主图                     |
-| `draft`          | 否   | 生产环境隐藏草稿             |
+| `draft`          | 否   | 所有公开环境均隐藏草稿       |
 | `canonicalUrl`   | 否   | 外部 canonical URL           |
 
 ## 路由生成
@@ -83,13 +75,13 @@ draft: false
 对于文件：
 
 ```text
-content/blog/zh/折腾/xiaomi-book-pro-14.md
+content/blog/zh/数据分析/nodeseek-online.md
 ```
 
 生成路径：
 
 ```text
-/zh/折腾/xiaomi-book-pro-14
+/zh/数据分析/nodeseek-online
 ```
 
 公开 slug 不含文件扩展名。若 flattenedPath 因双后缀文件变成 `折腾/use-grok-bot.md`，`blogSlug` 仍会收成 `折腾/use-grok-bot`。
@@ -97,26 +89,20 @@ content/blog/zh/折腾/xiaomi-book-pro-14.md
 对于文件：
 
 ```text
-content/blog/en/折腾/xiaomi-book-pro-14.md
+content/blog/en/数据分析/nodeseek-online.md
 ```
 
 生成路径：
 
 ```text
-/en/折腾/xiaomi-book-pro-14
+/en/数据分析/nodeseek-online
 ```
 
-默认语言是 `zh`。无语言前缀的历史路径由 Cloudflare Pages redirects 跳转到 `/zh/...`。旧的平铺文章 URL 再 301 到主题路径，例如 `/zh/xiaomi-book-pro-14` → `/zh/折腾/xiaomi-book-pro-14/`。`/blog/xiaomi-book-pro-14` 先经现有 splat 到 `/zh/xiaomi-book-pro-14`，再跳到新路径。
+默认语言是 `zh`。历史路径只按 `public/_redirects` 中的实际规则跳转，例如 `/posts/nodeseek-online/` → `/zh/数据分析/nodeseek-online/`；不存在的旧文章路径保持 404，不跨文章跳转。
 
 没有 `/{locale}/folders/...` 列表路由。文件夹只出现在右侧内容树里，行本身只负责展开/折叠，文章叶子是普通 `Link`。
 
-| 旧 URL                                  | 新 URL                                       |
-| --------------------------------------- | -------------------------------------------- |
-| `/zh/blog-git-metadata-and-icons/`      | `/zh/技术/blog-git-metadata-and-icons/`      |
-| `/zh/kde-plasma-obsdian-web-clipper/`   | `/zh/折腾/kde-plasma-obsdian-web-clipper/`   |
-| `/zh/making-memoh-cheaper-on-telegram/` | `/zh/技术/making-memoh-cheaper-on-telegram/` |
-| `/zh/xiaomi-book-pro-14/`               | `/zh/折腾/xiaomi-book-pro-14/`               |
-| `/en/xiaomi-book-pro-14/`               | `/en/折腾/xiaomi-book-pro-14/`               |
+历史 Hugo URL `/posts/nodeseek-online/` 跳到 `/zh/数据分析/nodeseek-online/`，图片 splat 同样以 `public/_redirects` 为准。不存在的示例路径不构造重定向。
 
 文章移进主题目录后，Git 元数据仍要跟到平铺旧路径：`git log --follow` 看当前文件，候选路径再补 `content/blog/{locale}/{slug}.md` 和更早的 `data/blog/` 位置。这样相关提交在 rename 提交前后都还能列出来。
 
@@ -128,7 +114,7 @@ content/blog/en/折腾/xiaomi-book-pro-14.md
 
 - 标准 Markdown
 - GFM 表格、任务列表等语法
-- MDX JSX 组件
+- 白名单 MDX JSX 组件与静态 JSON props
 - 代码块高亮
 - 行内代码
 - heading slug
@@ -164,6 +150,7 @@ components/MDXComponents.tsx
 - `table`
 - `Icon`
 - `ECharts`
+- `StrategyCard`
 - `TradingViewMiniChart`
 - `TradingViewAdvancedChart`
 
@@ -177,15 +164,15 @@ components/MDXComponents.tsx
 :icon-rocket:
 ```
 
-shortcode 会在构建期转换成 `<Icon name="..." />`。图标名来自 `lucide-react`，支持 kebab-case、snake_case 和 PascalCase；常用别名在 `lib/iconAliases.ts`。
+shortcode 会在运行时转换成 `<Icon name="..." />`。图标名来自 `lucide-react`，支持 kebab-case、snake_case 和 PascalCase；常用别名在 `lib/iconAliases.ts`。
 
-为了避免把整套 lucide 图标打进首屏包，仓库会生成一个只包含已使用图标的 registry：
+常用 UI 图标使用构建 registry；文章新增图标通过完整动态映射按需导入，不需要重新构建：
 
 ```bash
 pnpm icons:generate
 ```
 
-`pnpm build` 和 pre-commit hook 会自动执行生成；CI 使用 `pnpm icons:check` 防止生成文件过期。
+`pnpm build` 和 pre-commit hook 会自动执行生成；本地发布门禁使用 `pnpm icons:check` 防止生成文件过期。
 
 ## 代码块
 
@@ -233,7 +220,7 @@ echo "hello"
 - JSON 不合法时不会构建失败，而是回退渲染为普通的 `echarts` 代码块，方便排查。
 - `backgroundColor` 默认注入为 `transparent`,可以在 option 里覆盖。
 
-需要写函数等 JSON 表达不了的配置时，可以改用 MDX 组件直接传 JS 对象：
+也可以用 MDX 组件传静态对象；函数、调用、import/export、spread、事件属性和危险 URL 会被拒绝：
 
 ```mdx
 <ECharts
@@ -247,11 +234,11 @@ echo "hello"
 />
 ```
 
-可运行的示例见文章 `content/blog/zh/技术/blog-git-metadata-and-icons.md` 的「代码块直接渲染 ECharts」一节。
+富内容能力由 `tests/unit/document.test.ts` 与 E2E 隔离 fixture 实际解析验证，不向生产添加示例文章。
 
 ## 数学公式
 
-公式用 LaTeX 语法书写，构建时由 remark-math 解析、MathJax 渲染成内联 SVG，不加载任何客户端脚本或字体。
+公式用 LaTeX 语法书写，运行时由 remark-math 解析、MathJax 渲染成内联 SVG，不加载任何客户端脚本或字体。
 
 行间公式把 `$$...$$` 单独成段：
 
@@ -292,7 +279,7 @@ Markdown 图片会渲染为带 `loading="lazy"` 和 `decoding="async"` 的原生
 
 ## RSS
 
-RSS 在构建后生成：
+RSS 由当前发布快照实时提供：
 
 ```text
 /feed.xml
@@ -303,7 +290,7 @@ RSS 在构建后生成：
 RSS 生成脚本：
 
 ```text
-scripts/rss.mjs
+server/content-worker.ts
 ```
 
 ## 非内置能力
@@ -312,6 +299,6 @@ scripts/rss.mjs
 
 - citation/bibliography
 - GitHub blockquote alert
-- 内置搜索索引
+- 作者 JavaScript 执行
 
-如果内容需要这些能力，应先更新 Contentlayer/MDX 管线，再补充相应文档。
+如果内容需要这些能力，应先更新白名单内容管线与测试，再补充文档。

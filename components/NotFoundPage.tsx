@@ -1,6 +1,4 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import Link from '@/components/Link'
 import { getLocaleFromPathname, localizePath, ui } from '@/lib/i18n'
 

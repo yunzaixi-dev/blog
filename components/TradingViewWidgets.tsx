@@ -1,8 +1,6 @@
-'use client'
-
 import { normalizeTradingViewSymbol } from '@/lib/tradingview'
 import { useTheme } from 'next-themes'
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { getLocaleFromPathname, localeConfig } from '@/lib/i18n'
 

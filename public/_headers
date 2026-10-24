@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' analytics.umami.is https://s3.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self'; connect-src 'self' analytics.umami.is; font-src 'self'; frame-src https://www.tradingview-widget.com https://s.tradingview.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' analytics.umami.is https://s3.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self'; connect-src 'self' analytics.umami.is; font-src 'self'; frame-src https://www.tradingview-widget.com https://s.tradingview.com
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -7,11 +7,11 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-/_next/static/*
+/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /static/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /export/*
   Content-Type: text/markdown; charset=utf-8

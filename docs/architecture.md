@@ -1,150 +1,67 @@
 # 软件架构
 
-本项目是纯静态双语博客。生产环境不运行 Node.js 服务，文章、列表和索引页面均在构建阶段预渲染。文章阅读采用路由优先架构：文章 URL 是独立阅读页面，不是列表卡片的展开状态。各架构决策的背景见[决策记录](./decisions.md)：文章与历史所有权（[ADR-0007](./decisions.md#adr-0007-路由优先的文章阅读)）、卡片到文章页的视觉连续性（[ADR-0008](./decisions.md#adr-0008-app-store-风格文章卡片转场)）、稳定根布局与本地服务器一致性（[ADR-0009](./decisions.md#adr-0009-稳定根布局与本地服务器一致性)）、MDX 安全边界（[ADR-0003](./decisions.md#adr-0003-移除浏览器端-mdx-求值)）。
+React 静态应用壳与运行时内容完全分离。文章更新无需前端构建、CI/CD 或进程重启。当前发布决策是 ADR-0021，保留 ADR-0019 的安全 parser 与 UI 边界；详见 [publication.md](./publication.md)。旧 Next.js 静态正文与 Pagefind 决策已被取代。
 
-## 构建模型
-
-```text
-MDX files
-  -> Contentlayer
-  -> typed content data + generated MDX modules
-  -> Next.js static routes
-  -> out/
-  -> localized HTML language normalization
-  -> Pagefind index
-  -> Cloudflare Pages
-```
-
-构建入口是 `pnpm build`。`next build` 只在非开发阶段启用 `output: 'export'`；随后构建后处理先校正每个本地化 HTML 的 `<html lang>`，再让 Pagefind 扫描最终文档。构建完成后，`out/` 是唯一部署产物。
-
-## 目录职责
+## 数据流
 
 ```text
-app/          Next.js 路由、页面、SEO、全局布局和渐进增强 UI
-components/   UI、有限动效、MDX 渲染和文章阅读 client islands
-layouts/      列表与文章的页面级布局边界
-content/      文章和作者 MDX 内容
-data/         导航、站点信息和代码主题等配置
-lib/          内容查询、列表投影、TOC、日期、SEO、国际化和小型路由工具
-scripts/      开发、构建后处理和质量检查脚本
-public/       静态资源和 Cloudflare Pages headers
-docs/         架构决策与维护文档
+Vite -> Cloudflare Pages zaixi.dev (static shell + hashed assets)
+Git -> independent git-sync importer -> private Node stdio parser
+  -> R2 immutable referenced media + Typesense revision collections
+  -> PostgreSQL transaction commits release / active_revision
+Browser -> api.zaixi.dev -> PG active page/feed/sitemap/export projection
+Browser search -> Go -> PG active collection -> Typesense
+Browser media -> blog-media.zaixi.dev immutable R2 object
 ```
 
-## 内容管线
+生产 API 只读 PG 和 Typesense，不挂载 Git、不启动 Node。独立 importer 管理私有 Node stdio parser，固定 checkout SHA 并持 PG advisory lock；媒体及索引成功后以单事务提交完整 release。公开读取只认 active_revision，syncing/failed 仍服务最后 committed release；无 active、PG/Typesense 读取故障返回 503。旧无数据库文件模式仅保留本地 preview 与解析测试。
 
-文章位于 `content/blog/zh/` 和 `content/blog/en/`，可按主题再嵌套一层目录。Contentlayer 在构建时读取 MDX frontmatter 与正文，生成 `.contentlayer/generated`。生产构建先生成内容数据，再运行 `next build`；页面运行时不读取文件系统。公开 URL 是 `/{locale}/{topic}/{basename}/`；旧的平铺文章 URL 由 `public/_redirects` 永久跳转。
+## 目录与边界
 
-核心边界如下：
+- `app/main.tsx`：普通 React Router data router、稳定 AppShell、唯一 ScrollRestoration。
+- `app/page.tsx`：运行时 page loader 与页面投影消费；没有文章静态模块。
+- `internal/web/`：内容目录安全读取、快照锁与发布、搜索、HTTP、动态 head 与静态服务。
+- `internal/publication/`：PG schema、release 导入、R2 上传、Typesense 索引与生产 API 读取。
+- `server/content-worker.ts`：frontmatter schema、内容查询投影、正文 JSON 树、RSS/sitemap/export。
+- `server/document.ts`、`content-pipeline/`：安全 Markdown/MDX 解析及原 remark/rehype 插件。
+- `components/DocumentRenderer.tsx`：固定 registry 递归渲染 JSON 文档；浏览器不执行作者代码。
+- `lib/content/`：类型、term 原始 label/slug、列表与树查询。只在 worker 中绑定完整文章集合。
+- `content/` 与 `public/`：独立持久挂载；不是应用构建所需的文章数据。
 
-- `lib/content/posts.ts` 是文章和作者数据的查询入口。
-- `lib/content/terms.ts` 负责分类、标签的 slug、展示 label、计数、过滤和静态参数。
-- `lib/listPosts.ts` 把完整文章投影为可序列化的卡片数据。
-- `lib/content/contentTree.ts` 把同一 locale 的 `sourcePosts` 投影为只有 title/path/slug 的文件夹树；分类/标签列表也必须用完整 locale 集合，不能用过滤后的 term 列表。
-- `lib/toc.ts` 从 Markdown 标题生成目录数据。
-- `components/MDXServerRenderer.tsx` 只在文章路由的服务端边界渲染生成的 MDX 模块。
-- `lib/i18n.ts` 负责语言配置、路径本地化和界面文案。
+## API 与响应语义
 
-浏览器不接收或执行 Contentlayer 的 MDX runtime code。MDX 内的交互组件按正常 React 边界 hydration；列表页不通过 HTML 注入或客户端求值重建正文。
+`GET /api/page?path=/{locale}/.../` 返回当前请求同一快照的 kind、locale、metadata，以及对应页面的 cards/article/body/tree/terms。列表只携带卡片投影；文章只携带当前文章的白名单树、作者、TOC、精简上一篇/下一篇和 locale 内容树。未知页面返回 404 与本地化 notFound 投影，未知 API 返回 JSON 404，非法 path 返回 400。
 
-## 路由与渲染所有权
+`GET /api/search?q=...&locale=zh|en&limit=1..50` 从 PG 当前 release 选择 Typesense 双语 collection，不使用内存 fallback。默认 limit 10，q 必须非空且不超过 200 Unicode 字符；重复/未知参数、非法 locale/limit 返回 400。标题权重高于摘要、摘要高于正文；摘要纯文本，不注入 HTML。草稿不进入页面、搜索、RSS、sitemap 或 export。
 
-列表路由和文章路由拥有不同的 RSC 数据与页面几何。
+`/feed.xml`、`/{locale}/tags/{tag}/feed.xml`、历史 `/tags/{tag}/feed.xml`、`/sitemap.xml`、`/robots.txt`、`/export/{locale}/{slug}.md` 都来自同一发布快照。页面文档、API 和这些内容响应均 `no-store`。
 
-### 文档根与 404
+## 安全内容树
 
-`app/layout.tsx` 是唯一文档根，由服务端拥有 `<html>`、`<head>`、`<body>`、全局样式、providers、分析脚本和 `AppShell`。`app/[locale]/layout.tsx` 只负责 locale 静态参数与 metadata，不生成第二套文档标签。这个边界确保正常路由与根级未知路由在 `next dev` 中都有稳定的 root layout。
+管线保持 remark-gfm → remark-math（singleDollarTextMath 实际为 true）→ TradingView → ECharts → icons → GitHub embeds 的次序，随后 heading slug/autolink → MathJax SVG → code source metadata → Shiki → code line metadata → minify。
 
-根布局的静态初值使用默认语言；`app/localized-html.tsx` 按 pathname 在初始浏览器文档及客户端导航时设置实际 `lang`。生产构建还会在 Pagefind 运行前递归校正 `out/{locale}/` 中的 HTML，因此静态文件和搜索索引分别得到 `zh-CN` 或 `en-US`，不依赖 hydration 才正确。
+白名单仅允许标准排版元素与 Icon、Image、ECharts、StrategyCard、TradingView 两类 widget。JSX props 限静态字面量、数组/对象、负数，拒绝 ESM import/export、函数、调用、spread、事件属性、危险对象键及 URL。原 Markdown、编译器和可执行 MDX code 不进入浏览器。MathJax/Shiki 的生成样式在服务端转换为静态属性；生成 style 节点不能从作者输入直接注入。新图标通过 lucide 完整动态映射按需加载，新图片使用挂载资源的原生 img，不依赖构建时文章 manifest。
 
-`app/not-found.tsx` 和 `app/[locale]/not-found.tsx` 都使用 `components/NotFoundPage.tsx`。共享页面按 pathname 选择本地化文案，并统一 title、正文和返回链接。Next.js 15.5 开发服务器的原始 404 streaming shell 可以与 Caddy 返回的静态 `404/index.html` 不同；支持的一致性边界是浏览器完成框架渲染后可观察的 status、title、`html lang`、文案和链接，不要求响应字节相同。
+## 文档与 SEO
 
-### 列表路由
-
-首页、分类页和标签页必须只查询、排序并渲染 `BlogListPost` 卡片数据。列表 RSC payload 不得包含正文、`mdxModulePath`、编译后 MDX code 或隐藏的文章阅读树。分页或无限加载只改变可见卡片数量，不改变文章路由身份。
-
-卡片必须使用普通 Next.js `Link` 指向 `/{locale}/{slug}`。修改键点击、新标签页、焦点、预取和浏览器语义保持原生；列表点击不得以 sessionStorage pending motion、卡片让位或正文展开状态机作为正确性前提。捕获阶段可以为普通主键导航采集完整卡片的最小展示字段与 viewport rectangle，但不得 `preventDefault()`、克隆 DOM 或把展示快照作为导航前提。
-
-### 文章路由
-
-文章 RSC 必须只查询并渲染当前文章、作者信息、目录数据、上一篇/下一篇的精简导航数据，以及同一 locale 的紧凑内容树（title/path/slug）。页面首屏从返回控制、文章标题和当前文章元信息开始，不得在当前文章之前渲染其他列表卡片。内容树不得携带 `body` 或 `mdxModulePath`。
-
-当前文章正文必须通过构建期生成的 MDX 模块和 `MDXServerRenderer` 进入静态 HTML并默认可见。刷新、直接访问、新标签页和禁用 JavaScript时都必须得到同一篇可读正文。
-
-TOC、阅读进度、代码复制、主题、第三方 widget 和经过验证的返回行为保持为小型 client islands。`ArticleReader` 是窄客户端边界：它接收服务端已渲染的 children，保存 `<article>` DOM ref 并传给 `ReadingProgress`，同时捕获普通同文档 fragment 点击。fragment 经 `lib/articleFragment.ts` 校验后，以保留现有 Next.js history state 的 `replaceState()` 更新 URL，并即时滚动已验证目标，避免插入新的 history entry。它不导入 `Blog`、MDX 或正文数据，不变换 children，也不控制正文初始可见性。这些 islands 可以订阅浏览器状态，但不能拥有正文数据或把文章页还原成客户端列表展开状态。
+Pages 静态壳由 React 在 API 返回后更新 title、lang、canonical、OG/Twitter、hreflang 与 JSON-LD，不承诺社交抓取器看到动态 metadata。无 JavaScript 时显示说明与 Markdown export 路径，不承诺无脚本正文。Go 本地 preview 仍注入动态 head。Pages 未知页面壳可能 200，API 返回真实 404 并显示本地化页面；后端未知资源真实 404。
 
 ## 返回与滚动
 
-文章顶部返回控制的稳定 `href` 必须是本地化首页。只有当前标签页的普通主键列表 Link 写入一次性到达凭证，且凭证中的同源、同 locale 来源、精确文章目标和创建时间都通过验证时，普通主键点击才可使用 `history.back()` 返回该列表。凭证只保存来源 URL、目标 URL 和创建时间，不用 `history.length` 推断 history 索引；文章 hydration 仅接受当前 document time origin 之后创建的短期凭证，随后立即清除，并把验证结果限制在以文章路径区分的当前返回组件实例。停留时长不改变已经验证的实例状态。直达、刷新、外链、新标签页、过期或目标不匹配的凭证、文章间切换和未知 history 均走本地化首页；返回控制不得因错误假设离开站点。
+稳定 `AppShell` 保留 animata 状态机。路由、POP、focus、pageshow 发起新请求，loader AbortSignal 防止旧结果覆盖；不使用定时轮询。列表按 history key 保存已加载数量，确保第六篇以后返回仍有目标卡片。唯一 React Router ScrollRestoration 与浏览器负责位置恢复，不保存 scrollY、不做 timer 恢复。fragment 保留 history.state 并 replaceState，不插入返回项。
 
-路由滚动只有一个所有者：Next.js 与浏览器。文章导航不使用 `scroll: false`，不保存 `scrollY`，不设置延迟恢复 timer，不创建临时滚动 runway，也不在路由提交后执行位置修正。有效 Back 使用浏览器原生位置恢复，首页 fallback 使用普通 Link 导航。文章边界内的普通同文档 fragment 锚点必须验证同源 pathname、search、可解码目标 ID 和目标存在性，再以保留现有 Next.js `history.state` 的 `history.replaceState()` 更新当前文章 entry，并使用无 smooth 的 `scrollIntoView()` 定位；它不能在文章与已验证列表来源之间插入 history entry。修改键和新标签页继续使用原生行为。
+返回控制默认本地化首页；只有同标签页、同源、同 locale、精确目标、短到达窗口的一次性来源凭证允许 Back。树内切换 replace 并保留来源会话；直达、刷新、外链与新标签页不能 Back 离开站点。
 
 ## 文章卡片转场
 
-本节是 ADR-0008 的规范性合同；是否已经落地必须以对应源代码与浏览器测试为准，不能从文档状态推断。
+明暗主题切换使用现有 next-themes 的 `disableTransitionOnChange`：主题色原子切换，不让背景色和文字以不同节奏过渡成浅灰中间帧。卡片 hover 和文章 morph 动效仍保持原有行为。
 
-从完整 `PostCard` 打开文章时，App Shell 必须使用一个 fixed、结构化、`aria-hidden="true"`、`pointer-events: none` 的 React 快照，把卡片表面以及卡片上所有可见元素从实测起始 rectangle 变换到文章阅读面。`PostCard`、`ArticleCardTransitionOverlay` 与 `PostLayout` 的共享头部消费同一展示合同；快照把 surface、cover、title、Git 相对更新时间、源码入口、summary、published date、primary tag 和 read-more affordance 分别建模，不能把 metadata 压成一个字符串或 DOM 片段。快照只消费最小序列化卡片字段，不使用 `cloneNode()`、复制交互控件、文章 HTML 或 MDX。搜索结果和侧栏文章链接缺少完整卡片合同时，改用单篇文章 skeleton 快照，不拼接不完整的共享元素。
+卡片、树快照 fixed、inert、aria-hidden，不复制 DOM 或正文。Header z50，覆盖层 z40。完整卡片共享 title/Git/summary/date/tag 的逐 child geometry；underlay 160ms 后打开 morph 380ms、验证返回 morph 340ms、返回 underlay 160ms 淡出。树 companion 同步 Phase B，树 solo 380ms；文章切换只用 180–220ms paint veil。reduced motion 取消大位移与等待。
 
-surface、cover、title、Git 信息、summary、published date 与 primary tag 是持久元素。它们在快照终点与文章共享头部中必须保持相同的元素顺序、字体、字重、行高、换行约束和目标 geometry，并按 child 分别执行 layout projection；不得用 opacity crossfade 遮掩两套标题或元信息渲染。Git 相对时间在捕获时冻结，避免过渡中因时钟或 hydration 改变文案。read-more 只属于来源卡片，在 inert 快照中保留 layout space 后平滑淡出，返回接近来源卡片时再恢复；它不会成为文章页上的可聚焦自链接。该合同是规范性目标，不能仅凭本段文档推断实现已完成。
+桌面阅读维持 `TOC(256) | gap(36) | surface | gap(36) | tree(256)`，shell 上限 1440；1024px 以下隐藏侧栏树，640px 以下卡片目标 top72/radius0，其他 top120/radius8。正文 rail、表格/代码/公式内部滚动与 44px 代码控件沿用现有样式。动画不接管路由或滚动；resize、缺几何、快速导航与不匹配目标立即退出快照。
 
-转场覆盖层为 `z-index: 40`，Header 为 `z-index: 50`。`320px` 与 `390px` 下目标面宽度为 viewport 全宽、`top: 72px`、radius 为 `0`；`640–1023px` 下目标面为居中 shell（`min(viewport - 30px, 1440px)`）、`top: 120px`、radius 为 `8px`；`1024px` 及以上目标面为同一居中 shell 减去 `584px`（TOC `256` + 间距 `36` + 间距 `36` + 内容树 `256`）后的中间栏，`top: 120px`、radius 为 `8px`。卡片意图先用页面色 underlay 以 `160 ms` / `easeOut` 盖住当前页背景（Phase A），卡片保持来源或文章 destination；再移动卡片（Phase B：打开 `380 ms`，经验证的返回 `340 ms`，easing `[0.32, 0.72, 0, 1]`）。打开没有额外的 underlay 淡出；返回在卡片回到列表目标后再把 underlay 以 `160 ms` 淡出（Phase C）。列表右侧内容树到文章右栏的位移是 ADR-0008 的 chrome companion：Phase A 保持来源/destination rectangle，Phase B 与卡片共用同一时钟，结构化 React 快照，不用 `cloneNode()`。树 overlay 只拥有 rail 尺寸的 fixed 面，用同一 easing 把来源 sidebar rectangle 滑到文章 rail rectangle，不得使用 `layout`、`layoutRoot` 或 scale projection；卡片 overlay 是唯一的 Motion layout 所有者。companion 返回滑动为 `340 ms`，且不得在卡片 Phase C 结束前自行卸载。快照冻结节点与当前展开文件夹；树 overlay 只挂一棵 flight 树，在整个滑行期间把行密度（fontSize/lineHeight/padding）从来源 chrome 连续补间到目标 chrome，chrome 属性在滑行起点一次翻转，不重播折叠面板入场。到达 `revealed` 时真实树无过渡立即显示，树 overlay 在其上以 `180 ms` 淡出，两者像素一致因此无闪烁。`<1024px` 时树 destination 为 `null`，只播卡片序列。文章到文章只允许阅读面上的 paint-only veil（`180–220 ms`），不得把正文或祖先写成 `opacity: 0`，也不得用 `AnimatePresence` 保留旧 MDX。
+## 静态服务与开发一致性
 
-转场不等待路由，路由也不等待转场。普通文章 Link 立即导航；卡片返回把已验证的 `history.back()` 推迟到返回 underlay 淡入至不透明之后（避免列表页从半透明层下漏出或滚动位置闪烁），树 solo 返回与 fallback Link 仍立即导航。返回折叠只有在列表提交后能找到匹配的完整卡片和有效 rectangle 时才继续，否则立即移除覆盖层；它不能滚动列表来制造目标。缺数据、无效矩形、storage 失败、route mismatch、动画中断和 viewport resize 同样立即退化为无覆盖层的普通导航。
+Go 使用 os.Root 限制根目录，禁 dotfile、目录列表与符号链接；静态支持 GET/HEAD、304、Range。哈希 assets 一年 immutable，可变媒体一小时 must-revalidate。权威 `_redirects` 按顺序与 splat 匹配，保留 query/Unicode，不强加尾斜杠。安全头由 Go handler 执行。
 
-覆盖层不拥有正文、焦点、history 或 scroll，不锁页面滚动，不设置 `history.scrollRestoration`，不合成 `popstate`，不保存或矫正 `scrollY`。`AnimatePresence` 只能短暂保留 inert 快照，不能保留旧路由、旧卡片树或文章正文。
-
-只有经过完整 `PostCard` 校验的卡片意图，才允许在 inert 快照背后加入页面色 underlay：打开从第 0 帧以 `160 ms` 淡入，返回在 `return-waiting` / `returning` 同样淡入，并在卡片回到列表目标后再淡出。目标 pathname 提交后、`destinationStage === 'opening'` 期间，文章 surface 与桌面 TOC 通过 CSS 隐藏（`opacity: 0` + `visibility: hidden`），防止真实像素从半透明 underlay 漏出或与快照双重渲染；到达 `revealed` 时无过渡立即显示，卡片 overlay 整体（含 underlay）在其上以 `180 ms` 退出淡出，快照与真实像素一致因此交接无缝。目标 DOM 始终挂载并保持原有语义、静态布局、focus、history 与 scroll 行为。destination-only presentation 仅限显式标记的有界文章头部控件和文章专有 metadata；只有这些头部元素可以在打开期间 `opacity: 0`，并在 handoff 后用 `180 ms` 显示。正文及其所有祖先不属于该标记合同，始终在视觉层下保持静态可见；共享 cover、title 和卡片字段禁止 opacity crossfade。直达、失败和退化路径不使用 underlay。reduced motion 只保留极短 snapshot 提示，随后立即显示目标 presentation，不等待 underlay 或分阶段 reveal。
-
-## 动画边界
-
-Motion 和 `components/animata/` 只负责有界面的视觉反馈，不负责文章数据、文章生命周期或滚动正确性。
-
-- 正文不是 disclosure，不执行 `height: 0 -> auto`、整篇 opacity gating 或退出折叠。
-- 正文静态 HTML 不依赖 hydration 或动画完成后才显示。
-- 快速反馈使用 160-180 ms；标准反馈使用 200-220 ms。
-- 可见位移只使用 `transform`，幅度不超过 8 px；透明度与 transform 动画不得触发布局。
-- 一次交互最多有一个主要动画。已提交且没有状态变化的内容不重播入场。
-- 应用级 Motion 配置使用 `reducedMotion="user"`。减弱动态效果时取消非必要位移、stagger、smooth scroll 和等待 timer，不改变内容或焦点结果。
-
-ADR-0008 的单个卡片转场是 timing 与 displacement 的唯一 layout 例外：其 inert overlay 可先用 `160 ms` underlay 淡入，再使用 `380/340 ms` 和大于 `8px` 的 transform，打开 handoff 后可对显式标记的 destination-only 文章头部元素使用 `180 ms` reveal，但不能让正文 DOM、route commit、focus、scroll 或 history traversal 等待。内容树 companion 先在 Phase A 保持 rectangle，再在 Phase B 共用同一时钟，但只 tween 显式 `top` / `left` / `width` / `height`，不得再声明 `layout` 或 `layoutRoot`。其他控件继续使用 fast/standard 两档。
-
-通用页面转场不得掩盖路由提交、延迟可读正文或与文章返回竞争。实验性 View Transition API 和新动画依赖不属于当前架构。
-
-## 加载边界
-
-Loading UI 是可选的渐进增强，必须匹配目标页面几何，不能成为静态内容可见性的前提。
-
-本地化祖先、文章路由以及分类/标签的 index 和 detail 路由都不设置 `loading.tsx`。当前 Next.js 静态导出中的 streaming fallback 会把最终内容放在隐藏的 `S:0` segment，并依赖 JavaScript 把它替换到 `B:0` boundary；禁用 JavaScript 时客户端会停留在 loading shell。这与静态内容必须直接可见的契约冲突，因此这些路由的直达、刷新、新标签页和无脚本请求直接使用预渲染的最终 HTML。
-
-从列表、搜索结果或侧栏文章链接进行普通主键导航时，`BlogListNavigationRecorder` 只记录来源并通知 `AppShell`。ADR-0008 要求 `AppShell` 把完整 `PostCard` 来源显示为结构化卡片快照，并在桌面并行播放内容树 chrome overlay；此时取消阅读面 veil，卡片 overlay 独占 `layout` / `layoutRoot`。列表内容树点击使用树 overlay 加阅读面 veil，不用卡片 morph；缺少树几何时改为普通导航，不用 skeleton。文章树点击只盖阅读面 veil，但保留既有卡片/树转场会话并把目标重定到新文章（补发返回标记，rail 树链接用 history replace），关闭时仍按正常返回序列飞回。只有搜索或最近文章等既没有完整卡片也没有树几何的来源才使用单篇阅读 skeleton。覆盖层可跨 pathname commit 完成自身的有界退出；完整卡片意图从第 0 帧淡入页面色 underlay，commit 后以 CSS 隐藏目标 surface/TOC 直到 revealed，返回路径同样使用 underlay。两者都不阻止 Link、不替代导航、也不控制正文 DOM 可见性。修改键点击和新标签页不会触发该覆盖层。
-
-分类和标签的 index/detail 页面不依赖骨架显示标题、term chip 或文章卡片。搜索没有 route loading 骨架，输入后的等待状态只显示在已经渲染的结果区域。当前实现不声称每个路由都有 loading skeleton；任何新增边界都必须先验证目标几何、原始静态 HTML 和禁用 JavaScript 行为。
-
-## 性能与安全边界
-
-列表页只序列化卡片需要的字段，文章页只导入当前 MDX 模块。上一篇/下一篇和 TOC 数据保持精简，避免把完整文章集合传给 client islands。转场状态只能重复当前选中卡片已经拥有的最小展示字段和数值 geometry，以及页面上已有的紧凑内容树（title/path/slug + rectangle + 来源 chrome + 当前展开文件夹）；不得为动画把正文、完整文章集合、DOM HTML 或 MDX code 带入 App Shell。
-
-静态导出模式下，Next.js 不在运行时优化图片。主图和头像应在提交前压缩并提供稳定尺寸或宽高比，以控制 LCP 与 CLS。第三方脚本默认不进入首屏；接入时需要验证 CSP、静态构建产物和交互性能。
-
-Cloudflare Pages CSP 不为文章渲染开放 eval。`public/_headers`、生成的 JSON-LD、分析脚本和第三方 widget 的现有例外需要单独审查，不能扩展成客户端 MDX 执行能力。
-
-## 路由结构
-
-默认语言是 `zh`。应用只保留显式语言路径；`public/_redirects` 是无语言前缀历史 URL 的权威规则，并把它们永久跳到 `/zh/...`。开发服务器通过 `next.config.js` 读取同一文件；生产导出把它复制到 `out/`，静态 preview 再由共享 parser 转换为 Caddy directives。Caddy 关闭自己的 canonical URI redirect，避免覆盖仓库定义的 trailing-slash 与 wildcard 行为。
-
-```text
-/{locale}
-/{locale}/{slug}
-/{locale}/{topic}/{slug}
-/{locale}/search
-/{locale}/tags
-/{locale}/tags/{tag}
-/{locale}/categories
-/{locale}/categories/{category}
-```
-
-所有动态内容路由通过 `generateStaticParams` 生成静态页面。
-
-## 运行时边界
-
-生产站点只依赖浏览器和 Cloudflare Pages 静态托管。运行时不存在文件系统读取、服务端 API、数据库或 Node.js server。搜索使用 HTML 语言校正后生成的 Pagefind 索引和按需加载的浏览器 runtime，不改变文章与列表的 RSC 数据边界。`pnpm dev` 是非导出的 Next.js 开发运行时，`pnpm preview` 是 Caddy 对 `out/` 的静态服务；两者的浏览器可观察路由合同由 `pnpm test:e2e:parity` 验证。
+开发 Vite 严格 45100、Go 严格 45101；Vite API 与文档转发到相同 handler 再插入 HMR。preview 直接由 Go 提供壳与 API。进程 supervisor 只管理自己创建的进程组。运行时一致性、浏览器导航和安全边界由 unit、Go race、runtime integration、E2E 与 parity 门禁共同验证。

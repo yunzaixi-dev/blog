@@ -1,6 +1,5 @@
-import NextImage, { ImageProps } from 'next/image'
+import ResponsiveImage from './ResponsiveImage'
 
-// Keep image imports behind one component so static export fallbacks can be added centrally.
-const Image = (props: ImageProps) => <NextImage {...props} />
+const Image = ResponsiveImage
 
 export default Image

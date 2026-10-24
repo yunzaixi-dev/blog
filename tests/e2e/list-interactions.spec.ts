@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 async function scrollToPageBottom(page: Page) {
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -7,7 +8,7 @@ async function scrollToPageBottom(page: Page) {
 async function navigateFromPrimaryNavigation(page: Page, linkName: string) {
   const header = page.locator('.header-shell')
 
-  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) < 640) {
+  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) < 1024) {
     await header.getByRole('button', { name: '打开导航' }).click()
   }
 
@@ -30,6 +31,27 @@ test('back to top returns the list to the top', async ({ page }) => {
 
   await page.getByRole('button', { name: /回到顶部/ }).click()
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(8)
+})
+
+test('returning from an incrementally loaded article preserves its card and scroll', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/zh/')
+  await page.locator('[data-post-shell]').last().scrollIntoViewIfNeeded()
+  const card = page.locator('[data-post-shell="zh/工程/reliable-login"]')
+  await card.waitFor({ state: 'visible' })
+  await card.scrollIntoViewIfNeeded()
+  const before = await page.evaluate(() => window.scrollY)
+  await card.locator('h2 a').click()
+  await expect(page.locator('[data-article-body]')).toBeVisible()
+  await page.getByRole('link', { name: '返回列表' }).click()
+  await expect(page).toHaveURL('/zh/')
+  await expect(card).toBeVisible()
+  await expect(page.locator('[data-post-shell]')).toHaveCount(8)
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - before))
+    .toBeLessThanOrEqual(10)
 })
 
 test('home, category, and tag navigation never resolves to a blank route', async ({ page }) => {

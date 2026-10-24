@@ -1,6 +1,4 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { usePathname } from '@/lib/router'
 import { motion, useReducedMotion } from 'motion/react'
 import headerNavLinks from '@/data/headerNavLinks'
 import Link from './Link'

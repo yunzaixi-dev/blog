@@ -244,7 +244,7 @@ export function parseArgs(args) {
  * Run pnpm content:generate to validate the newly created file.
  * @returns {void}
  */
-function validateWithContentlayer() {
+function validateContent() {
   const result = spawnSync('pnpm', ['content:generate'], {
     stdio: 'inherit',
     shell: false,
@@ -323,7 +323,7 @@ function runCreate(args) {
 
   console.log(`已创建: ${result.filePath}`)
   console.log('正在运行 pnpm content:generate 验证...')
-  validateWithContentlayer()
+  validateContent()
   console.log('验证通过。')
 }
 

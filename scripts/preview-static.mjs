@@ -1,39 +1,21 @@
-import { mkdir } from 'node:fs/promises'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parsePreviewArgs } from './preview-static/args.mjs'
-import { ensureCaddy, writeCaddyfile } from './preview-static/caddy.mjs'
-import { getNetworkUrls, run, runWithPreviewReminders } from './preview-static/process.mjs'
+import { run, supervise } from './lib/processes.mjs'
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const { port, skipBuild, updateCaddy } = parsePreviewArgs(process.argv.slice(2))
-
-async function buildStaticSite() {
-  if (skipBuild) {
-    return
-  }
-
-  await run('pnpm', ['build'], { cwd: projectRoot, env: process.env })
-}
-
-await buildStaticSite()
-
-const caddyPaths = await ensureCaddy({ projectRoot, updateCaddy })
-const caddyfilePath = await writeCaddyfile({ port, projectRoot, toolsDir: caddyPaths.toolsDir })
-const previewUrls = getNetworkUrls(port)
-
-await mkdir(caddyPaths.caddyXdgConfigDir, { recursive: true })
-await mkdir(caddyPaths.caddyXdgDataDir, { recursive: true })
-await runWithPreviewReminders(
-  caddyPaths.caddyBinaryPath,
-  ['run', '--config', caddyfilePath, '--adapter', 'caddyfile'],
-  previewUrls,
+const { port, skipBuild } = parsePreviewArgs(process.argv.slice(2))
+if (!skipBuild) await run('pnpm', ['build'])
+console.log(`Preview: http://127.0.0.1:${port}/zh/`)
+await supervise([
   {
-    cwd: projectRoot,
-    env: {
-      ...process.env,
-      XDG_CONFIG_HOME: caddyPaths.caddyXdgConfigDir,
-      XDG_DATA_HOME: caddyPaths.caddyXdgDataDir,
-    },
-  }
-)
+    command: './dist/blog',
+    args: [
+      '--addr',
+      `127.0.0.1:${port}`,
+      '--static',
+      'out',
+      '--content',
+      process.env.CONTENT_DIR || 'content',
+      '--media',
+      process.env.MEDIA_DIR || 'public',
+    ],
+  },
+])

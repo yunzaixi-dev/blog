@@ -1,7 +1,8 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { type Locator, type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 // Rendered href attributes keep the raw (decoded) non-ASCII folder name.
-const ARTICLE_HREF = '/zh/折腾/xiaomi-book-pro-14/'
+const ARTICLE_HREF = '/zh/数据分析/nodeseek-post-types/'
 
 async function expectTouchTarget(locator: Locator, minSize = 44) {
   const box = await locator.boundingBox()
@@ -91,6 +92,44 @@ test('mobile home shows denser cards without shrinking real targets', async ({ p
   await expectNoHorizontalOverflow(page)
 })
 
+test('theme changes keep card backgrounds and text on the same palette without gray frames', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.addInitScript(() => localStorage.setItem('theme', 'light'))
+  await page.goto('/zh/')
+  await expect(page.locator('[data-post-shell]').first()).toBeVisible()
+  const button = page.getByRole('button', { name: '切换暗色模式' })
+  for (const theme of ['dark', 'light'] as const) {
+    const samples = await page.evaluate(async (nextTheme) => {
+      const card = document.querySelector<HTMLElement>('[data-post-shell]')!
+      const toggle = document.querySelector<HTMLButtonElement>('[aria-label="切换暗色模式"]')!
+      const changed = new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (document.documentElement.classList.contains(nextTheme)) {
+            observer.disconnect()
+            resolve()
+          }
+        })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      })
+      toggle.click()
+      await changed
+      const frames: string[] = []
+      for (let frame = 0; frame < 4; frame++) {
+        frames.push(getComputedStyle(card).backgroundColor)
+        await new Promise(requestAnimationFrame)
+      }
+      return frames
+    }, theme)
+    expect(samples).toEqual(
+      Array(4).fill(theme === 'dark' ? 'rgb(37, 45, 56)' : 'rgb(255, 255, 255)')
+    )
+    await expect(button).toBeVisible()
+  }
+})
+
 test('desktop sidebars read lighter than the main post card', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/zh/')
@@ -123,15 +162,15 @@ test('desktop sidebars read lighter than the main post card', async ({ page }) =
 })
 
 test('search exposes a stable status region and busy result updates', async ({ page }) => {
-  let releasePagefind!: () => void
-  const pagefindReleased = new Promise<void>((resolve) => {
-    releasePagefind = resolve
+  let releaseSearch!: () => void
+  const searchReleased = new Promise<void>((resolve) => {
+    releaseSearch = resolve
   })
-  let delayedPagefindRequests = 0
+  let delayedSearchRequests = 0
 
-  await page.route('**/pagefind/pagefind.js', async (route) => {
-    delayedPagefindRequests += 1
-    await pagefindReleased
+  await page.route('**/api/search?*', async (route) => {
+    delayedSearchRequests += 1
+    await searchReleased
     await route.continue()
   })
 
@@ -146,13 +185,13 @@ test('search exposes a stable status region and busy result updates', async ({ p
   await expect(status).toHaveText('输入关键词开始搜索。')
   await expect(resultsRegion).toHaveAttribute('aria-busy', 'false')
 
-  await searchbox.fill('小米')
+  await searchbox.fill('NodeSeek')
 
-  await expect.poll(() => delayedPagefindRequests).toBeGreaterThan(0)
-  await expect(status).toHaveText('正在搜索「小米」。')
+  await expect.poll(() => delayedSearchRequests).toBeGreaterThan(0)
+  await expect(status).toHaveText('正在搜索「NodeSeek」。')
   await expect(resultsRegion).toHaveAttribute('aria-busy', 'true')
 
-  releasePagefind()
+  releaseSearch()
 
   await expect(page.locator(`a[data-blog-post-link][href="${ARTICLE_HREF}"]`)).toBeVisible()
   await expect(status).toContainText('找到')
@@ -175,7 +214,7 @@ test('search states stay compact and expose result and empty states at 320px', a
   expect(resultsBox!.y).toBeLessThan(220)
   await expect(resultsRegion).toHaveAttribute('data-search-state', 'idle')
 
-  await page.getByRole('searchbox', { name: '搜索' }).fill('小米')
+  await page.getByRole('searchbox', { name: '搜索' }).fill('NodeSeek')
   await expect(page.locator('[data-search-result-card]').first()).toBeVisible()
   await expect(resultsRegion).toHaveAttribute('data-search-state', 'results')
   await expectNoHorizontalOverflow(page)
@@ -185,19 +224,55 @@ test('search states stay compact and expose result and empty states at 320px', a
   await expect(page.getByRole('status')).toContainText('未找到')
 })
 
-test('search reports a recoverable error when the static index runtime is unavailable', async ({
-  page,
-}) => {
+test('search reports a recoverable error when the search API is unavailable', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 812 })
-  await page.route('**/pagefind/pagefind.js', (route) => route.abort())
+  await page.route('**/api/search?*', (route) => route.abort())
   await page.goto('/zh/search/')
 
   const resultsRegion = page.locator('[data-search-results]')
 
-  await page.getByRole('searchbox', { name: '搜索' }).fill('小米')
+  await page.getByRole('searchbox', { name: '搜索' }).fill('NodeSeek')
   await expect(resultsRegion).toHaveAttribute('data-search-state', 'error')
   await expect(page.getByRole('status')).toContainText('搜索索引暂不可用')
   await expectNoHorizontalOverflow(page)
+})
+
+test('a stale search response cannot overwrite the latest query', async ({ page }) => {
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/search?*', async (route) => {
+    const query = new URL(route.request().url()).searchParams.get('q')
+    if (query === 'old') {
+      await held
+      await route.fulfill({
+        json: { results: [{ url: '/zh/old/', excerpt: 'old', meta: { title: 'Old result' } }] },
+      })
+    } else
+      await route.fulfill({
+        json: {
+          results: [
+            {
+              url: '/zh/new/',
+              excerpt: '<script>safe text</script>',
+              meta: { title: 'New result' },
+            },
+          ],
+        },
+      })
+  })
+  await page.goto('/zh/search/')
+  await page.getByRole('searchbox').fill('old')
+  await expect(page.locator('[data-search-results]')).toHaveAttribute(
+    'data-search-state',
+    'loading'
+  )
+  await page.getByRole('searchbox').fill('new')
+  await expect(page.locator('[data-search-results]')).toContainText('New result')
+  release()
+  await expect(page.locator('[data-search-results]')).not.toContainText('Old result')
+  await expect(page.locator('[data-search-results] script')).toHaveCount(0)
 })
 
 for (const path of ['/zh/categories/', '/zh/tags/'] as const) {
@@ -222,10 +297,8 @@ for (const path of ['/zh/categories/', '/zh/tags/'] as const) {
 }
 
 for (const { path, heading } of [
-  { path: '/zh/categories/%E6%8A%98%E8%85%BE/', heading: '分类：折腾' },
-  { path: '/zh/tags/linux/', heading: '#Linux' },
-  { path: '/en/categories/%E6%8A%98%E8%85%BE/', heading: 'Category: 折腾' },
-  { path: '/en/tags/linux/', heading: '#Linux' },
+  { path: '/zh/categories/%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90/', heading: '分类：数据分析' },
+  { path: '/zh/tags/nodeseek/', heading: '#NodeSeek' },
 ] as const) {
   test(`${path} exposes a compact visible term context heading at 320px`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 812 })
@@ -252,7 +325,7 @@ test('footer social links and desktop RSS expose comfortable targets', async ({ 
   await expectTouchTarget(page.getByRole('link', { name: '订阅 Atom RSS' }), 40)
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
 
-  for (const name of ['电子邮件', 'GitHub', 'X', 'Telegram']) {
+  for (const name of ['GitHub', 'X', 'Telegram']) {
     await expectTouchTarget(page.getByRole('contentinfo').getByRole('link', { name }))
   }
 })

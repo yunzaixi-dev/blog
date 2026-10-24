@@ -7,7 +7,6 @@ export default function MDXImage({
   ...props
 }: ComponentPropsWithoutRef<'img'>) {
   const image = (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       alt={alt}
       className={['article-image', className].filter(Boolean).join(' ')}
@@ -27,7 +26,7 @@ export default function MDXImage({
     )
   }
 
-  // Markdown images do not carry dimensions, so Next Image is not a safe default here.
+  // Mounted content images use native URLs without a build-time manifest.
   // A missing alt is left undefined so jsx-a11y/alt-text surfaces it during content review.
   return image
 }

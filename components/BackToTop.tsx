@@ -1,5 +1,3 @@
-'use client'
-
 import { useState } from 'react'
 import { useScroll, useMotionValueEvent } from 'motion/react'
 import RevealButton from '@/components/animata/RevealButton'

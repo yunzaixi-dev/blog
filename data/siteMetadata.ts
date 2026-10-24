@@ -26,17 +26,16 @@ const siteMetadata: SiteMetadata = {
   description: '纯粹的技术博客。写下来，才算真正想清楚。',
   language: 'zh-CN',
   theme: 'dark', // system, dark or light
-  // dev builds publish to dev.zaixi.dev (see .github/workflows/deploy.yml).
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://zaixi.dev',
+  siteUrl: process.env.SITE_URL || 'https://zaixi.dev',
   siteRepo: 'https://github.com/yunzaixi-dev/blog',
-  socialBanner: '/static/images/avatar.jpg',
+  socialBanner: '/static/images/avatar.webp',
   email: '',
   github: 'https://github.com/yunzaixi-dev',
   x: 'https://x.com/big_blue_fish',
   telegram: 'https://t.me/blue_big_fish',
   analytics: {
     umami: {
-      websiteId: process.env.NEXT_UMAMI_ID,
+      websiteId: process.env.UMAMI_ID,
     },
   },
 }
