@@ -324,3 +324,15 @@ frontmatter 使用固定 safe YAML parser，不经过 gray-matter 自动语言�
 依赖证据由 planner 本次核实：pgx 14,352 stars、AWS SDK Go 3,670 stars、Typesense 27,035 stars、SeaweedFS 35,710 stars，均超过 1,000 门槛。最初采用的 MinIO 已 archived，且实际 Sengi 匿名拉取失败，官方 Quay 镜像也无可用 manifest；本地和 CI 改用官方 `chrislusf/seaweedfs:4.17` 的固定 digest、mini S3 模式和独立卷。使用独立测试凭据，写权限限测试 bucket；保留 `minio` 服务 DNS 供既有本地入口兼容，旧 MinIO 卷不删除或复用。生产 R2 仍通过官方 AWS SDK Go v2 访问。部署和发布协议见 [publication.md](./publication.md)。
 
 **后果**：导入失败不发布半版，旧索引保留避免并发清理；草稿和删除经新 release 从正文/索引消失，已公开 R2 对象不承诺密码学撤回。应用发布采用镜像与 Pages 两阶段显式门控，后端真实就绪后才允许 Pages 手动发布同 SHA。
+
+## ADR-0022 本地 devcontainer 完整验证与极简云端交付
+
+日期：2026-10-24（取代 ADR-0020 中云端运行完整门禁的安排）
+
+**背景**：用户要求耗时高的测试全部在本地完成，云端 CI/CD 保持极简。宿主 PingFang 与 Linux 容器字体曾造成同一版本布局检查结果不同，宿主单独通过不足以建立发布证据。
+
+**决策**：`pnpm verify:local` 作为统一完整门禁，使用隔离 devcontainer 项目与全新依赖卷执行代码、浏览器、集成和性能检查；运行时镜像检查由宿主 Docker 编排，不向 app 挂载 Docker socket。pre-push 对应用变更调用完整入口，纯内容变更继续独立导入。云端仅构建 Pages、实际镜像、执行轻量容器 smoke 并发布同一已 smoke 镜像，保持只读构建与独立 packages 写权限，Pages 仍在后端就绪后显式发布。云端不重复重测试，不把本地报告当作密码学证明。
+
+用户同时要求不再默认启动子代理：当前 agent 顺序完成 planner、implementer、reviewer 职责，复用有效证据，但确定性门禁及失败处理标准不减。
+
+**后果**：本地需要 Docker 和容器依赖下载，验证会增加本地 push 耗时；云端耗时集中在必要构建。字体差异导致的两项原布局断言保持不变，正文 gutter 下限改为 16px、移动卡片只收紧留白，不缩正文和目标尺寸。修改测试策略不会把既有失败变成通过，仍须完整本地验收。

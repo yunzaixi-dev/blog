@@ -47,7 +47,11 @@ Git 历史默认仅使用运行目录中的本地 Git 信息；无 git 或无历
 
 ## Sengi 镜像流水线
 
-`.github/workflows/deploy.yml` 使用 Sengi Ubuntu 24.04 runner：双核运行 `pnpm check`、生产构建、runtime、e2e、parity 和 perf 门禁，四核使用 Buildx 构建实际 Dockerfile，再执行容器 smoke。Node 24 和 Go 1.26 与本地交付保持一致，BuildKit 缓存使用 GitHub Actions cache。
+先在本地运行 `pnpm verify:local`。该入口将当前工作树复制到独立临时 checkout，复用 `.devcontainer` 镜像与 Compose 服务定义，创建唯一项目、全新数据卷和随机 loopback 依赖端口，不复用或清理开发环境。应用代码检查、Go race/vet/build、生产构建、PG/Typesense/S3 集成、跨域发布、runtime、完整 E2E、parity 和性能预算均在容器内执行，浏览器使用容器字体。宿主只负责 Docker 调度及运行时镜像 smoke 的编排；被检查的进程仍来自真实 Docker 镜像。不会把 Docker socket 挂入开发容器。
+
+完成后 `.cache/local-verification.json` 记录原始提交、未提交写集和本地镜像 ID；未提交候选不冒充干净提交。执行期间源码变动会失败。测试 checkout 保留原 Git 历史，但不复制仓库配置、凭据或 hooks；只有未提交候选使用临时提交供 importer 读取，该提交不冒充应用源码版本。失败时输出有界依赖日志并保留 `.cache/blog-verify-*-test-results`，最终只清理该次创建的容器、网络和卷，开发卷保持原样。该命令需要 Linux 宿主 Node、Docker Compose 和可用 Docker daemon，运行时镜像验证沿用 Linux host network；不在已进入的 app 容器内嵌套调用。应用 pre-push 要求已提交且工作区干净，并自动验证正在推送的 HEAD；纯内容 push 不触发应用构建。
+
+`.github/workflows/deploy.yml` 使用 Sengi Ubuntu 24.04 runner：双核仅构建生产 Pages 壳并检查重定向/CSP artifact，四核使用 Buildx 构建实际 Dockerfile，再执行无需外部依赖的轻量容器 smoke。云端不安装 Playwright 浏览器、不启动 PG/Typesense/S3、不跑 check、runtime、E2E、parity、perf 或完整 publication 集成。BuildKit 缓存继续使用 GitHub Actions cache。云端不验证本地报告的可信性；本地完整门禁由提交流程负责，不引入签名证明平台。
 
 PR 和 dev 分支只验证、构建和 smoke，不发布镜像或部署。main 应用变更通过后，将已 smoke 的同一镜像推送到 `ghcr.io/yunzaixi-dev/blog:<完整提交 SHA>`；`blog-image-<sha>` artifact 中的 `image-digest.txt` 和 job summary 给出 `ghcr.io/yunzaixi-dev/blog@sha256:...`，由 GitOps 清单固定此 digest，Flux 负责集群协调。流水线不调用 kubectl、不修改 Flux、不依赖 latest 标签。
 

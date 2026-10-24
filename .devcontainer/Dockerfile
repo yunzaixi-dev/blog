@@ -12,4 +12,7 @@ COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium
 COPY --chown=node:node go.mod go.sum ./
 RUN go mod download
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends jq && rm -rf /var/lib/apt/lists/*
+USER node
 CMD ["sleep", "infinity"]

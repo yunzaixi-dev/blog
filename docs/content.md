@@ -172,7 +172,7 @@ shortcode 会在运行时转换成 `<Icon name="..." />`。图标名来自 `luci
 pnpm icons:generate
 ```
 
-`pnpm build` 和 pre-commit hook 会自动执行生成；CI 使用 `pnpm icons:check` 防止生成文件过期。
+`pnpm build` 和 pre-commit hook 会自动执行生成；本地发布门禁使用 `pnpm icons:check` 防止生成文件过期。
 
 ## 代码块
 

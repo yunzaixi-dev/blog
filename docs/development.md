@@ -22,6 +22,10 @@ pnpm preview --no-build --port 45100
 
 ## 验收命令
 
+完整应用发布在 Linux 宿主运行 `pnpm verify:local`。入口自动创建使用 `.devcontainer` 定义的独立测试项目，在容器内运行下述检查以及真实 PG/Typesense/S3 发布集成；宿主只编排 Docker 和实际运行时镜像 smoke。无需手动进入容器，也不复用开发数据库或占用开发端口。应用 push hook 自动执行，纯文章和媒体 push 保持独立导入。隔离与证据说明见 [deployment.md](./deployment.md#sengi-镜像流水线)。
+
+以下单项命令用于容器内定向诊断，不替代完整发布入口：
+
 ```bash
 pnpm format:check
 pnpm lint:check
@@ -38,7 +42,7 @@ pnpm perf:check
 
 `pnpm check` 包含确定性静态门禁、unit、图标/图片检查以及 Go race/vet/build/gofmt。`test:runtime` 在 `45101` 启动隔离内容服务，证明启动后新增、同长保 mtime 修改、草稿、删除、写坏和恢复同时影响页面 API、搜索、feed、sitemap、export，无构建或重启。先运行 `pnpm build` 获得交付包。
 
-`test:e2e` 使用已构建产物，在 `45100` 运行 preview；`test:e2e:parity` 同时使用 Vite `45100`、Go `45101` 与 preview `45102`。运行前释放自己启动的占用进程，勿终止其他项目进程。首次安装浏览器：`pnpm exec playwright install chromium`。E2E 用真实中文文章；英文和富内容能力用测试内隔离的真实解析 fixture，不增加生产文章。
+`test:e2e` 使用已构建产物，在 `45100` 运行 preview；`test:e2e:parity` 同时使用 Vite `45100`、Go `45101` 与 preview `45110`。运行前释放自己启动的占用进程，勿终止其他项目进程。devcontainer 镜像已安装 Chromium 和系统依赖，宿主字体的测试结果不作为完整发布验收。E2E 用真实中文文章；英文和富内容能力用测试内隔离的真实解析 fixture，不增加生产文章。
 
 `perf:check` 构建、检查应用壳 HTML 与资源预算。`quality:html` 发现 issue 必须非零退出；预算不因迁移而调高。ECharts 是按需异步 chunk，不属于首页初始依赖。文章正文和解析器不得进入前端构建图。
 

@@ -38,6 +38,7 @@
     "check": "pnpm format:check && pnpm lint:check && pnpm typecheck && pnpm typecheck:scripts && pnpm test:unit && pnpm deadcode:check && pnpm icons:check && pnpm images:check && pnpm test:go",
     "perf:check": "pnpm build && pnpm quality:html && pnpm size:budget",
     "verify": "pnpm check && pnpm test:runtime && pnpm test:e2e && pnpm perf:check",
+    "verify:local": "node scripts/verify-local.mjs",
     "prepare": "husky",
     "test:go": "go test -race ./... && go vet ./... && go build -o /dev/null ./cmd/blog && test -z \"$(gofmt -l cmd internal)\"",
     "test:runtime": "node scripts/test-runtime.mjs",

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full commit SHA to verify, smoke-test and publish
+        description: Locally verified full commit SHA to build, smoke-test and publish
         required: true
         type: string
       deploy_pages:
@@ -22,7 +22,7 @@ concurrency:
 jobs:
   verify:
     runs-on: sengi-standard-2-ubuntu-2404
-    timeout-minutes: 45
+    timeout-minutes: 15
     permissions:
       contents: read
     outputs:
@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ inputs.commit_sha || github.sha }}
-      - name: Bind all checks and the image to the same commit
+      - name: Bind all artifacts to the same locally verified commit
         id: source
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha || github.sha }}
@@ -44,41 +44,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version-file: .node-version, cache: pnpm }
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.26.x" }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm check
-      - run: pnpm build
-      - name: Start isolated PostgreSQL, Typesense and S3
-        run: |
-          chmod a+r .devcontainer/s3-local.json
-          docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
-      - name: Exercise the real publication pipeline
-        env:
-          DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
-          TYPESENSE_URL: http://127.0.0.1:45103
-          TYPESENSE_API_KEY: blog-local-typesense-only
-          S3_ENDPOINT: http://127.0.0.1:45104
-          S3_REGION: us-east-1
-          R2_BUCKET: blog-test-media
-          S3_ACCESS_KEY_ID: blog-local-only
-          S3_SECRET_ACCESS_KEY: blog-local-secret-only
-          S3_FORCE_PATH_STYLE: 'true'
-          MEDIA_BASE_URL: http://127.0.0.1:45104/blog-test-media
-        run: pnpm test:integration && pnpm test:split-release
-      - run: pnpm test:runtime
-      - run: pnpm test:e2e
-      - run: pnpm test:e2e:parity
-      - run: pnpm perf:check
-      - name: Diagnose failed test dependencies before cleanup
-        if: failure()
-        run: |
-          docker compose -f .devcontainer/compose.yaml ps --all
-          docker compose -f .devcontainer/compose.yaml logs --no-color --tail 200 postgres typesense minio
-      - name: Stop isolated test dependencies
-        if: always()
-        run: docker compose -f .devcontainer/compose.yaml down
       - name: Build the Pages shell against the production API
         env:
           API_BASE_URL: https://api.zaixi.dev
@@ -124,34 +90,6 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke-test the built image with independent mounted content
         run: node scripts/test-container.mjs "$IMAGE"
-      - name: Start image publication dependencies
-        run: |
-          chmod a+r .devcontainer/s3-local.json
-          docker compose -f .devcontainer/compose.yaml up -d --wait postgres typesense minio
-      - name: Verify the production image and real Git-worktree hook
-        env:
-          DATABASE_URL: postgres://blog:blog-local-only@127.0.0.1:45102/blog?sslmode=disable
-          TYPESENSE_URL: http://127.0.0.1:45103
-          TYPESENSE_API_KEY: blog-local-typesense-only
-          S3_ENDPOINT: http://127.0.0.1:45104
-          S3_REGION: us-east-1
-          R2_BUCKET: blog-test-media
-          S3_ACCESS_KEY_ID: blog-local-only
-          S3_SECRET_ACCESS_KEY: blog-local-secret-only
-          S3_FORCE_PATH_STYLE: 'true'
-          MEDIA_BASE_URL: http://127.0.0.1:45104/blog-test-media
-        run: |
-          docker run --rm --network host --env DATABASE_URL --entrypoint /app/dist/blog "$IMAGE" --mode=migrate
-          docker run --rm --network host --env R2_BUCKET --env S3_ENDPOINT --env S3_REGION --env S3_ACCESS_KEY_ID --env S3_SECRET_ACCESS_KEY --env S3_FORCE_PATH_STYLE --entrypoint /app/dist/blog "$IMAGE" --mode=init-local-media
-          node scripts/test-container-publication.mjs "$IMAGE"
-      - name: Diagnose failed image dependencies before cleanup
-        if: failure()
-        run: |
-          docker compose -f .devcontainer/compose.yaml ps --all
-          docker compose -f .devcontainer/compose.yaml logs --no-color --tail 200 postgres typesense minio
-      - name: Stop image test dependencies
-        if: always()
-        run: docker compose -f .devcontainer/compose.yaml down
       - name: Save the exact smoke-tested image for publication
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: docker save --output blog-image.tar "$IMAGE"
