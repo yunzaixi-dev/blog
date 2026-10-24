@@ -33,11 +33,14 @@ describe('local verification isolation', () => {
       expect(workflow).not.toContain(command)
     }
     expect(workflow).toContain('node scripts/test-container.mjs "$IMAGE"')
-    expect(workflow).toContain('docker save --output blog-image.tar "$IMAGE"')
+    expect(workflow).toContain('docker save "$IMAGE" | gzip -1 > blog-image.tar.gz')
     const publish = workflow.split('  publish:')[1].split('  pages:')[0]
-    expect(publish).toContain('docker load --input blog-image.tar')
+    expect(publish).toContain('gzip -t blog-image.tar.gz')
+    expect(publish).toContain('docker load --input blog-image.tar.gz')
     expect(publish).toContain('docker push "$IMAGE"')
     expect(publish).not.toContain('build-push-action')
+    expect(workflow).toContain('harbor.agentwego.com/zaixi/blog:')
+    expect(workflow).not.toContain('packages: write')
     expect(workflow).toContain('inputs.deploy_pages')
   })
   it('only exempts independent content updates, never application or mixed changes', () => {

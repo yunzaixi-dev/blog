@@ -9,6 +9,8 @@ spec:
     spec:
       restartPolicy: Never
       automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: blog-registry
       containers:
         - name: migrate
           image: ${BLOG_IMAGE}

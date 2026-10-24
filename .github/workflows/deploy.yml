@@ -67,7 +67,7 @@ jobs:
     permissions:
       contents: read
     env:
-      IMAGE: ghcr.io/yunzaixi-dev/blog:${{ needs.verify.outputs.sha }}
+      IMAGE: harbor.agentwego.com/zaixi/blog:${{ needs.verify.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,12 +92,15 @@ jobs:
         run: node scripts/test-container.mjs "$IMAGE"
       - name: Save the exact smoke-tested image for publication
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        run: docker save --output blog-image.tar "$IMAGE"
+        run: |
+          set -o pipefail
+          docker save "$IMAGE" | gzip -1 > blog-image.tar.gz
+          gzip -t blog-image.tar.gz
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         with:
           name: blog-container-${{ needs.verify.outputs.sha }}
-          path: blog-image.tar
+          path: blog-image.tar.gz
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -107,28 +110,30 @@ jobs:
     runs-on: sengi-standard-2-ubuntu-2404
     timeout-minutes: 15
     permissions:
-      packages: write
+      contents: read
     env:
-      IMAGE: ghcr.io/yunzaixi-dev/blog:${{ needs.verify.outputs.sha }}
+      IMAGE: harbor.agentwego.com/zaixi/blog:${{ needs.verify.outputs.sha }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: blog-container-${{ needs.verify.outputs.sha }}
       - name: Load the smoke-tested image without executing source or rebuilding
-        run: docker load --input blog-image.tar
-      - name: Log in to GHCR
+        run: |
+          gzip -t blog-image.tar.gz
+          docker load --input blog-image.tar.gz
+      - name: Log in with the blog-only registry identity
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: harbor.agentwego.com
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
       - name: Publish the exact smoke-tested image and record its digest
         env:
           SOURCE_SHA: ${{ needs.verify.outputs.sha }}
         run: |
           docker push "$IMAGE"
           PIN=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')
-          [[ "$PIN" =~ ^ghcr.io/yunzaixi-dev/blog@sha256:[0-9a-f]{64}$ ]]
+          [[ "$PIN" =~ ^harbor.agentwego.com/zaixi/blog@sha256:[0-9a-f]{64}$ ]]
           printf '%s\n' "$PIN" > image-digest.txt
           printf 'Source: `%s`\n\nFlux image pin: `%s`\n' "$SOURCE_SHA" "$PIN" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4

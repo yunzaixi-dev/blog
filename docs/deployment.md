@@ -53,11 +53,11 @@ Git 历史默认仅使用运行目录中的本地 Git 信息；无 git 或无历
 
 `.github/workflows/deploy.yml` 使用 Sengi Ubuntu 24.04 runner：双核仅构建生产 Pages 壳并检查重定向/CSP artifact，四核使用 Buildx 构建实际 Dockerfile，再执行无需外部依赖的轻量容器 smoke。云端不安装 Playwright 浏览器、不启动 PG/Typesense/S3、不跑 check、runtime、E2E、parity、perf 或完整 publication 集成。BuildKit 缓存继续使用 GitHub Actions cache。云端不验证本地报告的可信性；本地完整门禁由提交流程负责，不引入签名证明平台。
 
-PR 和 dev 分支只验证、构建和 smoke，不发布镜像或部署。main 应用变更通过后，将已 smoke 的同一镜像推送到 `ghcr.io/yunzaixi-dev/blog:<完整提交 SHA>`；`blog-image-<sha>` artifact 中的 `image-digest.txt` 和 job summary 给出 `ghcr.io/yunzaixi-dev/blog@sha256:...`，由 GitOps 清单固定此 digest，Flux 负责集群协调。流水线不调用 kubectl、不修改 Flux、不依赖 latest 标签。
+PR 和 dev 分支只验证、构建和 smoke，不发布镜像或部署。main 应用变更通过后，将已 smoke 的同一镜像推送到自有 Zot 仓库 `harbor.agentwego.com/zaixi/blog:<完整提交 SHA>`；`blog-image-<sha>` artifact 中的 `image-digest.txt` 和 job summary 给出 `harbor.agentwego.com/zaixi/blog@sha256:...`，由 GitOps 清单固定此 digest，Flux 负责集群协调。流水线不调用 kubectl、不修改 Flux、不依赖 latest 标签。
 
 同次验证还产出独立 `blog-pages-<sha>` 静态壳 artifact。后端经 Flux、数据库与 DNS 实际验收后，手动运行同一 SHA 并设置 `deploy_pages=true`，才使用原有 CI secrets 经 `scripts/pages_deploy.py` 上传 `zaixi-blog` main。默认 false，main push 不自动替换 Pages。上传权限与 GHCR publish job 分开。`deploy/**` 只更新固定 digest 不触发应用流水线，避免发布循环。
 
-首次上线可在 GitHub Actions 手动运行 `sengi-release`，`commit_sha` 必须提供完整 40 位提交 SHA。门禁、镜像构建、smoke 和最终标签全部绑定此提交；手动发布同样不能跳过验证。验证和镜像构建 job 只有 `contents: read`，checkout 不保留凭据。smoke 成功后以 `docker save` artifact 传递精确镜像；独立 publish job 仅在 main push 或手动发布时运行，独占 `packages: write`，只下载、加载和推送镜像，不 checkout、不执行源码、不重新构建。它使用 GitHub job token 登录 GHCR，无需读取本地 CLI 凭据。公开源码不自动等于公开 GHCR package；集群拉取前需确认包可匿名读取，或使用已批准的 imagePullSecret。
+首次上线可在 GitHub Actions 手动运行 `sengi-release`，`commit_sha` 必须提供完整 40 位提交 SHA。构建、smoke 和最终标签全部绑定此提交；完整测试先在本地完成。验证和镜像构建 job 只有 `contents: read`，checkout 不保留凭据。smoke 成功后以 `docker save | gzip` artifact 传递精确镜像，两端使用 `gzip -t` 检查传输完整性；独立 publish job 仅在 main push 或手动发布时运行，只下载、加载和推送镜像，不 checkout、不执行源码、不重新构建。`REGISTRY_USERNAME`／`REGISTRY_PASSWORD` 为博客专用 `blog-push`，仅允许 `zaixi/blog` 的 read/create/update；不再使用 GHCR、GitHub packages 写权限或网页公开包操作。迁移、API 和 importer 使用 namespace `blog` 的 `blog-registry` imagePullSecret，其 `blog-pull` 身份仅有该路径 read 权限，不复制其他应用凭据。
 
 只改 `content/**`、`public/static/images/**` 或 `public/forum/**` 不触发应用流水线；文章交付必须走独立内容同步。`pnpm test:container <image>` 可本地重跑实际镜像 smoke，覆盖 Go/私有 worker、静态壳、只读挂载内容修改/删除、媒体读取和 SIGTERM 退出，不把仓库文章打进镜像。
 
